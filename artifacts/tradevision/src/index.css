@@ -8,6 +8,9 @@
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
+  --color-buy: #3B82F6;
+  --color-sell: #EF4444;
+  --color-success: #22C55E;
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));

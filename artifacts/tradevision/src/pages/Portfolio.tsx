@@ -101,7 +101,7 @@ export default function Portfolio() {
                       <TableCell className="font-semibold text-xs">{holding.symbol}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{holding.asset}</TableCell>
                       <TableCell>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${holding.type === 'BUY' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${holding.type === 'BUY' ? 'bg-buy/10 text-buy' : 'bg-sell/10 text-sell'}`}>
                           {holding.type}
                         </span>
                       </TableCell>

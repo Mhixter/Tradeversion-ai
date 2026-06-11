@@ -85,7 +85,7 @@ export default function Dashboard() {
                   ) : signals?.slice(0, 4).map(signal => (
                     <div key={signal.id} className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-accent transition-colors">
                       <div className="flex items-center gap-2">
-                        <Badge className={`text-[10px] h-5 ${signal.direction === 'BUY' ? 'bg-success hover:bg-success' : 'bg-destructive hover:bg-destructive'}`}>
+                        <Badge className={`text-[10px] h-5 ${signal.direction === 'BUY' ? 'bg-buy hover:bg-buy' : 'bg-sell hover:bg-sell'}`}>
                           {signal.direction}
                         </Badge>
                         <span className="font-semibold text-foreground">{signal.symbol}</span>
@@ -203,7 +203,7 @@ export default function Dashboard() {
                      <TableRow key={trade.id} className="border-border">
                        <TableCell className="px-2 py-1.5 text-xs">
                          <div className="flex gap-2 items-center">
-                           <span className={trade.type === 'BUY' ? 'text-success' : 'text-destructive'}>{trade.type}</span>
+                           <span className={trade.type === 'BUY' ? 'text-buy font-bold' : 'text-sell font-bold'}>{trade.type}</span>
                            <span className="font-medium">{trade.symbol}</span>
                          </div>
                        </TableCell>
