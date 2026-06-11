@@ -1,0 +1,767 @@
+# TRADEVISION AI
+
+## Enterprise AI Trading Automation Platform
+
+### Vision
+
+Build the world's leading AI-powered trading automation platform that connects directly to MT4 and MT5 broker accounts, allowing traders, teams, strategy creators, and institutions to automate trading through professional AI bots, custom strategies, copy trading, and marketplace subscriptions.
+
+The platform NEVER holds customer funds.
+
+All funds remain with the user's broker.
+
+The platform only:
+
+* Reads broker data
+* Executes trades
+* Manages risk
+* Provides analytics
+* Hosts AI bots
+* Hosts strategy marketplace
+* Provides copy trading
+
+---
+
+# BUSINESS MODEL
+
+## Revenue Streams
+
+### Platform Subscription
+
+Starter
+
+* 1 Broker Account
+* 2 Active Bots
+
+Pro
+
+* 5 Broker Accounts
+* 20 Active Bots
+
+Quant
+
+* 20 Broker Accounts
+* 100 Bots
+* Marketplace Publishing
+
+Enterprise
+
+* Unlimited Accounts
+* Team Management
+* Advanced Roles
+* Dedicated Support
+
+---
+
+### Marketplace Commission
+
+Bot Creator Revenue
+
+70%
+
+Platform Revenue
+
+30%
+
+---
+
+### Copy Trading Revenue
+
+Master Traders can charge:
+
+* Monthly Subscription
+* Performance Fee
+
+Platform takes commission.
+
+---
+
+# CORE PRINCIPLE
+
+NO DEPOSITS
+
+NO WITHDRAWALS
+
+NO INTERNAL WALLET
+
+NO FUND CUSTODY
+
+Funds always remain:
+
+User → Broker
+
+Platform only controls:
+
+* Orders
+* Signals
+* Analytics
+* Automation
+
+---
+
+# TARGET USERS
+
+Retail Traders
+
+Prop Traders
+
+Trading Teams
+
+Fund Managers
+
+Strategy Creators
+
+Quant Developers
+
+Institutions
+
+---
+
+# USER TYPES
+
+## Individual Trader
+
+Can:
+
+* Connect broker
+* Use bots
+* Subscribe to strategies
+* Follow traders
+
+---
+
+## Strategy Creator
+
+Can:
+
+* Build bots
+* Publish strategies
+* Sell subscriptions
+* Receive marketplace revenue
+
+---
+
+## Master Trader
+
+Can:
+
+* Offer copy trading
+* Manage followers
+* Earn subscription fees
+
+---
+
+## Company Account
+
+Can manage teams.
+
+---
+
+# COMPANY ROLE MANAGEMENT
+
+## Owner
+
+Full Access
+
+Can:
+
+* Manage company
+* Billing
+* Team
+* Risk
+* Marketplace
+
+---
+
+## Company Admin
+
+Can:
+
+* Manage users
+* Manage bots
+* View reports
+
+---
+
+## Risk Manager
+
+Can:
+
+* Set risk limits
+* Stop bots
+* Close positions
+
+---
+
+## Strategy Developer
+
+Can:
+
+* Create bots
+* Create strategies
+* Run backtests
+
+---
+
+## Trader
+
+Can:
+
+* Deploy approved bots
+* Monitor trades
+
+---
+
+## Analyst
+
+Read-only analytics access
+
+---
+
+# BROKER INTEGRATION
+
+Primary Integration:
+
+MetaApi
+
+Support:
+
+* MT4
+* MT5
+
+Functions:
+
+* Connect account
+* Read balance
+* Read equity
+* Read margin
+* Read positions
+* Read history
+* Execute trades
+* Modify trades
+* Close trades
+
+---
+
+# AI BOT ECOSYSTEM
+
+## Forex Bots
+
+* Scalper AI
+* Trend Rider AI
+* Breakout AI
+* Swing AI
+
+---
+
+## Gold Bots
+
+* Gold Hunter AI
+* Gold Scalper AI
+* Gold Momentum AI
+
+---
+
+## Crypto Bots
+
+* BTC AI
+* ETH AI
+* Momentum Crypto AI
+
+---
+
+## Index Bots
+
+* NASDAQ AI
+* US30 AI
+* SP500 AI
+
+---
+
+## News Bots
+
+* NFP AI
+* CPI AI
+* Economic Calendar AI
+
+---
+
+## AI Prediction Bots
+
+* Trend Prediction AI
+* Sentiment AI
+* Volatility AI
+* Pattern Recognition AI
+
+---
+
+# BOT ACCURACY POLICY
+
+Never advertise:
+
+100% Accuracy
+
+Instead display:
+
+* AI Confidence Score
+* Win Rate
+* Drawdown
+* Sharpe Ratio
+* Risk Rating
+* Profit Factor
+
+---
+
+# STRATEGY BUILDER
+
+No-Code Builder
+
+Drag and Drop
+
+Indicators:
+
+* RSI
+* EMA
+* SMA
+* MACD
+* ADX
+* ATR
+* Bollinger Bands
+* VWAP
+
+AI Components:
+
+* Trend Predictor
+* Sentiment Predictor
+* Volatility Predictor
+* Pattern Recognition
+
+Risk Components:
+
+* Position Sizer
+* Drawdown Guard
+* Risk Firewall
+* Trailing Stop
+
+Actions:
+
+* Buy
+* Sell
+* Close
+* Partial Close
+
+---
+
+# AI MARKETPLACE
+
+Features
+
+Search
+
+Categories
+
+Ratings
+
+Subscriptions
+
+Performance Verification
+
+Filters
+
+* Forex
+* Gold
+* Crypto
+* Stocks
+* Indices
+
+Metrics
+
+* Win Rate
+* Drawdown
+* Sharpe Ratio
+* Profit Factor
+* Subscribers
+
+---
+
+# COPY TRADING
+
+Master Trader Profiles
+
+Show:
+
+* ROI
+* Drawdown
+* Win Rate
+* Followers
+* Risk Score
+
+Follower Controls
+
+* Allocation %
+* Risk Multiplier
+* Fixed Lot
+
+---
+
+# BACKTESTING
+
+Historical Testing
+
+Optimization
+
+Walk Forward Analysis
+
+Reports
+
+Metrics
+
+* Net Profit
+* Drawdown
+* Win Rate
+* Sharpe Ratio
+* Profit Factor
+
+---
+
+# RISK MANAGEMENT ENGINE
+
+Every trade must pass:
+
+Margin Validation
+
+Exposure Validation
+
+Position Size Validation
+
+Daily Loss Validation
+
+Risk Score Validation
+
+If any rule fails:
+
+Trade Blocked
+
+---
+
+# EXECUTION ENGINE
+
+Flow
+
+AI Signal
+
+↓
+
+Risk Engine
+
+↓
+
+Execution Engine
+
+↓
+
+MetaApi
+
+↓
+
+MT4 / MT5
+
+↓
+
+Broker
+
+↓
+
+Execution Report
+
+↓
+
+Analytics
+
+↓
+
+Dashboard
+
+---
+
+# DASHBOARD PAGES
+
+1. Dashboard
+
+2. Broker Connections
+
+3. Strategy Builder
+
+4. Bot Manager
+
+5. AI Marketplace
+
+6. Backtesting
+
+7. Copy Trading
+
+8. Portfolio Analytics
+
+9. Risk Center
+
+10. Execution Monitor
+
+11. Trade Analytics
+
+12. Notifications
+
+13. Account & Profile
+
+14. Security Center
+
+15. Settings
+
+16. Admin Panel
+
+---
+
+# DASHBOARD FEATURES
+
+Dashboard
+
+* Equity
+* Profit
+* Active Bots
+* Signals
+* Charts
+* Performance
+
+---
+
+Broker Connections
+
+* Connect MT4
+* Connect MT5
+* Sync Broker
+
+---
+
+Bot Manager
+
+* Start
+* Stop
+* Pause
+* Clone
+* Deploy
+
+---
+
+Execution Monitor
+
+* Signals
+* Orders
+* Fill Times
+* Latency
+
+---
+
+Portfolio Analytics
+
+* Equity Curve
+* Monthly Returns
+* Strategy Allocation
+
+---
+
+Trade Analytics
+
+* Trade History
+* Profit Distribution
+* Win/Loss Analysis
+
+---
+
+Risk Center
+
+* Drawdown
+* Exposure
+* Margin Usage
+* Emergency Stop
+
+---
+
+Notifications
+
+* Trade Alerts
+* Risk Alerts
+* Security Alerts
+
+---
+
+# SECURITY
+
+JWT
+
+OAuth2
+
+Google Login
+
+Microsoft Login
+
+2FA
+
+RBAC
+
+AES-256 Encryption
+
+Vault Secrets
+
+Session Management
+
+Device Management
+
+Audit Logging
+
+---
+
+# DATABASE TABLES
+
+Users
+
+Companies
+
+CompanyMembers
+
+BrokerAccounts
+
+Strategies
+
+Bots
+
+BotSubscriptions
+
+Trades
+
+Positions
+
+Signals
+
+Backtests
+
+Followers
+
+MasterTraders
+
+Notifications
+
+RiskProfiles
+
+APIKeys
+
+ActivityLogs
+
+MarketplaceListings
+
+Subscriptions
+
+Roles
+
+Permissions
+
+---
+
+# UI/UX DESIGN
+
+Theme
+
+Dark Professional
+
+Inspired By
+
+* TradingView
+* Bloomberg Terminal
+* Linear
+* Stripe Dashboard
+
+Colors
+
+Background
+
+#0B1020
+
+Cards
+
+#141A2E
+
+Primary
+
+#4F46E5
+
+Success
+
+#16A34A
+
+Danger
+
+#DC2626
+
+Features
+
+* Glassmorphism
+* Responsive
+* Mobile Friendly
+* Tablet Friendly
+* Desktop First
+* Professional Fintech Design
+* Enterprise Grade
+
+---
+
+# FUTURE ROADMAP
+
+Phase 1
+
+Broker Connections
+
+Bot Manager
+
+Strategy Builder
+
+Dashboard
+
+Risk Center
+
+Analytics
+
+---
+
+Phase 2
+
+Marketplace
+
+Copy Trading
+
+Advanced Backtesting
+
+---
+
+Phase 3
+
+Company Management
+
+Enterprise Teams
+
+Advanced Permissions
+
+---
+
+Phase 4
+
+Institutional Features
+
+FIX Protocol
+
+Multi-Broker Routing
+
+White Label Solutions
+
+---
+
+GOAL
+
+Create a production-ready SaaS platform that becomes the operating system for AI-driven trading automation, enabling traders, teams, and institutions to connect MT4/MT5 broker accounts, deploy professional trading bots, manage risk, analyze performance, subscribe to marketplace strategies, and scale trading operations without ever holding client funds.

@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TradeVision AI - Enterprise AI Trading Automation Platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: dashboard
+  - name: bots
+  - name: strategies
+  - name: marketplace
+  - name: portfolio
+  - name: backtesting
+  - name: copytrading
+  - name: riskcenter
+  - name: notifications
+  - name: brokers
+  - name: trades
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +33,2036 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── DASHBOARD ───────────────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/equity-curve:
+    get:
+      operationId: getEquityCurve
+      tags: [dashboard]
+      summary: Get equity curve data points
+      responses:
+        "200":
+          description: Equity curve data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquityPoint"
+
+  /dashboard/recent-trades:
+    get:
+      operationId: getDashboardRecentTrades
+      tags: [dashboard]
+      summary: Get recent trades for dashboard
+      responses:
+        "200":
+          description: Recent trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecentTrade"
+
+  /dashboard/signals:
+    get:
+      operationId: getDashboardSignals
+      tags: [dashboard]
+      summary: Get AI signals for dashboard
+      responses:
+        "200":
+          description: AI signals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AISignal"
+
+  /dashboard/active-bots:
+    get:
+      operationId: getDashboardActiveBots
+      tags: [dashboard]
+      summary: Get active bots summary
+      responses:
+        "200":
+          description: Active bots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BotSummary"
+
+  /dashboard/connected-accounts:
+    get:
+      operationId: getDashboardConnectedAccounts
+      tags: [dashboard]
+      summary: Get connected broker accounts
+      responses:
+        "200":
+          description: Connected accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BrokerAccount"
+
+  # ─── BROKERS ─────────────────────────────────────────────────────────────────
+  /brokers:
+    get:
+      operationId: getBrokers
+      tags: [brokers]
+      summary: List all broker connections
+      responses:
+        "200":
+          description: Broker list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BrokerAccount"
+    post:
+      operationId: connectBroker
+      tags: [brokers]
+      summary: Connect a new broker account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrokerInput"
+      responses:
+        "201":
+          description: Broker connected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrokerAccount"
+
+  /brokers/{id}:
+    delete:
+      operationId: disconnectBroker
+      tags: [brokers]
+      summary: Disconnect a broker
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Disconnected
+
+  # ─── BOTS ─────────────────────────────────────────────────────────────────────
+  /bots:
+    get:
+      operationId: getBots
+      tags: [bots]
+      summary: List all trading bots
+      responses:
+        "200":
+          description: Bot list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bot"
+    post:
+      operationId: createBot
+      tags: [bots]
+      summary: Create a new bot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BotInput"
+      responses:
+        "201":
+          description: Bot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bot"
+
+  /bots/stats:
+    get:
+      operationId: getBotsStats
+      tags: [bots]
+      summary: Get bot manager aggregate stats
+      responses:
+        "200":
+          description: Bots stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotStats"
+
+  /bots/top-performing:
+    get:
+      operationId: getTopPerformingBots
+      tags: [bots]
+      summary: Get top performing bots
+      responses:
+        "200":
+          description: Top bots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BotPerformance"
+
+  /bots/performance-chart:
+    get:
+      operationId: getBotPerformanceChart
+      tags: [bots]
+      summary: Get bots overall performance chart data
+      responses:
+        "200":
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquityPoint"
+
+  /bots/{id}:
+    get:
+      operationId: getBot
+      tags: [bots]
+      summary: Get a specific bot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bot"
+    patch:
+      operationId: updateBot
+      tags: [bots]
+      summary: Update bot settings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BotUpdate"
+      responses:
+        "200":
+          description: Bot updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bot"
+    delete:
+      operationId: deleteBot
+      tags: [bots]
+      summary: Delete a bot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /bots/{id}/start:
+    post:
+      operationId: startBot
+      tags: [bots]
+      summary: Start a bot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bot started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bot"
+
+  /bots/{id}/stop:
+    post:
+      operationId: stopBot
+      tags: [bots]
+      summary: Stop a bot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bot stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bot"
+
+  /bots/{id}/pause:
+    post:
+      operationId: pauseBot
+      tags: [bots]
+      summary: Pause a bot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bot paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bot"
+
+  /bots/logs:
+    get:
+      operationId: getBotLogs
+      tags: [bots]
+      summary: Get live bot logs
+      responses:
+        "200":
+          description: Bot logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BotLog"
+
+  # ─── STRATEGIES ────────────────────────────────────────────────────────────────
+  /strategies:
+    get:
+      operationId: getStrategies
+      tags: [strategies]
+      summary: List strategies
+      responses:
+        "200":
+          description: Strategy list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Strategy"
+    post:
+      operationId: createStrategy
+      tags: [strategies]
+      summary: Create a strategy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrategyInput"
+      responses:
+        "201":
+          description: Strategy created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+
+  /strategies/{id}:
+    get:
+      operationId: getStrategy
+      tags: [strategies]
+      summary: Get a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Strategy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+    patch:
+      operationId: updateStrategy
+      tags: [strategies]
+      summary: Update a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StrategyUpdate"
+      responses:
+        "200":
+          description: Strategy updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+
+  /strategies/{id}/deploy:
+    post:
+      operationId: deployStrategy
+      tags: [strategies]
+      summary: Deploy strategy to broker
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeployInput"
+      responses:
+        "200":
+          description: Deployed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Strategy"
+
+  /strategies/{id}/backtest-preview:
+    get:
+      operationId: getStrategyBacktestPreview
+      tags: [strategies]
+      summary: Get backtest preview for a strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Backtest preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestSummary"
+
+  # ─── MARKETPLACE ───────────────────────────────────────────────────────────────
+  /marketplace:
+    get:
+      operationId: getMarketplaceListings
+      tags: [marketplace]
+      summary: List marketplace AI strategies
+      responses:
+        "200":
+          description: Marketplace listings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketplaceListing"
+
+  /marketplace/highlights:
+    get:
+      operationId: getMarketplaceHighlights
+      tags: [marketplace]
+      summary: Get marketplace highlights (top performers, editor's choice, etc.)
+      responses:
+        "200":
+          description: Marketplace highlights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceHighlights"
+
+  /marketplace/top-authors:
+    get:
+      operationId: getTopAuthors
+      tags: [marketplace]
+      summary: Get top strategy authors
+      responses:
+        "200":
+          description: Top authors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StrategyAuthor"
+
+  /marketplace/{id}/subscribe:
+    post:
+      operationId: subscribeToStrategy
+      tags: [marketplace]
+      summary: Subscribe to a marketplace strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketplaceListing"
+
+  # ─── BACKTESTING ───────────────────────────────────────────────────────────────
+  /backtests:
+    get:
+      operationId: getBacktests
+      tags: [backtesting]
+      summary: List backtest runs
+      responses:
+        "200":
+          description: Backtests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Backtest"
+    post:
+      operationId: runBacktest
+      tags: [backtesting]
+      summary: Run a new backtest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BacktestInput"
+      responses:
+        "201":
+          description: Backtest started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Backtest"
+
+  /backtests/{id}:
+    get:
+      operationId: getBacktest
+      tags: [backtesting]
+      summary: Get a backtest result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Backtest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Backtest"
+
+  /backtests/{id}/trades:
+    get:
+      operationId: getBacktestTrades
+      tags: [backtesting]
+      summary: Get trades from a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Backtest trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BacktestTrade"
+
+  /backtests/{id}/equity-curve:
+    get:
+      operationId: getBacktestEquityCurve
+      tags: [backtesting]
+      summary: Get equity curve for a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Equity curve
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquityPoint"
+
+  /backtests/{id}/monthly-performance:
+    get:
+      operationId: getBacktestMonthlyPerformance
+      tags: [backtesting]
+      summary: Get monthly performance by period for a backtest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Monthly performance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyPerformance"
+
+  # ─── COPY TRADING ──────────────────────────────────────────────────────────────
+  /copy-trading/traders:
+    get:
+      operationId: getCopyTraders
+      tags: [copytrading]
+      summary: List available master traders to copy
+      responses:
+        "200":
+          description: Traders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MasterTrader"
+
+  /copy-trading/following:
+    get:
+      operationId: getMyFollowing
+      tags: [copytrading]
+      summary: Get traders I am copying
+      responses:
+        "200":
+          description: Following list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CopyPosition"
+
+  /copy-trading/stats:
+    get:
+      operationId: getCopyTradingStats
+      tags: [copytrading]
+      summary: Get copy trading aggregate stats
+      responses:
+        "200":
+          description: Copy trading stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyTradingStats"
+
+  /copy-trading/strategies:
+    get:
+      operationId: getCopyTradingStrategies
+      tags: [copytrading]
+      summary: Get top copy trading strategies
+      responses:
+        "200":
+          description: Strategies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CopyStrategy"
+
+  /copy-trading/{traderId}/follow:
+    post:
+      operationId: followTrader
+      tags: [copytrading]
+      summary: Start copying a trader
+      parameters:
+        - name: traderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FollowInput"
+      responses:
+        "200":
+          description: Following
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyPosition"
+
+  # ─── PORTFOLIO ─────────────────────────────────────────────────────────────────
+  /portfolio/overview:
+    get:
+      operationId: getPortfolioOverview
+      tags: [portfolio]
+      summary: Get portfolio overview stats
+      responses:
+        "200":
+          description: Portfolio overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioOverview"
+
+  /portfolio/equity-curve:
+    get:
+      operationId: getPortfolioEquityCurve
+      tags: [portfolio]
+      summary: Get portfolio equity curve
+      responses:
+        "200":
+          description: Equity curve
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquityPoint"
+
+  /portfolio/allocation:
+    get:
+      operationId: getPortfolioAllocation
+      tags: [portfolio]
+      summary: Get asset allocation breakdown
+      responses:
+        "200":
+          description: Allocation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AllocationItem"
+
+  /portfolio/holdings:
+    get:
+      operationId: getPortfolioHoldings
+      tags: [portfolio]
+      summary: Get holdings overview
+      responses:
+        "200":
+          description: Holdings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Holding"
+
+  /portfolio/top-positions:
+    get:
+      operationId: getTopPositions
+      tags: [portfolio]
+      summary: Get top profitable and losing positions
+      responses:
+        "200":
+          description: Top positions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopPositions"
+
+  /portfolio/monthly-performance:
+    get:
+      operationId: getPortfolioMonthlyPerformance
+      tags: [portfolio]
+      summary: Get monthly performance heatmap data
+      responses:
+        "200":
+          description: Monthly performance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyPerformanceRow"
+
+  /portfolio/account-summary:
+    get:
+      operationId: getAccountSummary
+      tags: [portfolio]
+      summary: Get account summary per broker
+      responses:
+        "200":
+          description: Account summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountBrokerSummary"
+
+  # ─── RISK CENTER ───────────────────────────────────────────────────────────────
+  /risk/overview:
+    get:
+      operationId: getRiskOverview
+      tags: [riskcenter]
+      summary: Get risk overview metrics
+      responses:
+        "200":
+          description: Risk overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskOverview"
+
+  /risk/exposure-breakdown:
+    get:
+      operationId: getRiskExposureBreakdown
+      tags: [riskcenter]
+      summary: Get exposure breakdown by asset class
+      responses:
+        "200":
+          description: Exposure breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExposureItem"
+
+  /risk/limits:
+    get:
+      operationId: getRiskLimits
+      tags: [riskcenter]
+      summary: Get risk limits and usage
+      responses:
+        "200":
+          description: Risk limits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskLimit"
+    patch:
+      operationId: updateRiskLimits
+      tags: [riskcenter]
+      summary: Update risk limits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskLimitUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskLimit"
+
+  /risk/alerts:
+    get:
+      operationId: getRiskAlerts
+      tags: [riskcenter]
+      summary: Get active risk alerts
+      responses:
+        "200":
+          description: Risk alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskAlert"
+
+  /risk/top-positions:
+    get:
+      operationId: getRiskyPositions
+      tags: [riskcenter]
+      summary: Get top risky open positions
+      responses:
+        "200":
+          description: Risky positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskyPosition"
+
+  /risk/stress-tests:
+    get:
+      operationId: getStressTests
+      tags: [riskcenter]
+      summary: Get stress test scenarios
+      responses:
+        "200":
+          description: Stress tests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StressTest"
+
+  /risk/summary:
+    get:
+      operationId: getRiskSummary
+      tags: [riskcenter]
+      summary: Get risk summary (equity, margin, exposure)
+      responses:
+        "200":
+          description: Risk summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskSummary"
+
+  # ─── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: List all notifications
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/summary:
+    get:
+      operationId: getNotificationSummary
+      tags: [notifications]
+      summary: Get notification summary counts by type
+      responses:
+        "200":
+          description: Notification summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationSummary"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked as read
+
+  # ─── TRADES ────────────────────────────────────────────────────────────────────
+  /trades:
+    get:
+      operationId: getTrades
+      tags: [trades]
+      summary: List all trades
+      responses:
+        "200":
+          description: Trade list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trade"
+
+  /trades/analytics:
+    get:
+      operationId: getTradeAnalytics
+      tags: [trades]
+      summary: Get trade analytics summary
+      responses:
+        "200":
+          description: Trade analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradeAnalytics"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ─── DASHBOARD ─────────────────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [totalEquity, dailyProfit, activeBots, winRate, totalReturn, sharpeRatio, maxDrawdown]
+      properties:
+        totalEquity:
+          type: number
+        dailyProfit:
+          type: number
+        activeBots:
+          type: integer
+        winRate:
+          type: number
+        totalReturn:
+          type: number
+        sharpeRatio:
+          type: number
+        maxDrawdown:
+          type: number
+        equityChange24h:
+          type: number
+        profitChange:
+          type: number
+        newBots:
+          type: integer
+        winRateChange:
+          type: number
+
+    EquityPoint:
+      type: object
+      required: [date, equity]
+      properties:
+        date:
+          type: string
+        equity:
+          type: number
+        buyHold:
+          type: ["number", "null"]
+
+    AISignal:
+      type: object
+      required: [id, symbol, direction, confidence, price, change, assetClass]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        direction:
+          type: string
+          enum: [BUY, SELL]
+        confidence:
+          type: integer
+        price:
+          type: number
+        change:
+          type: number
+        assetClass:
+          type: string
+
+    BotSummary:
+      type: object
+      required: [id, name, strategy, symbol, status, pnlToday, pnlAllTime]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        strategy:
+          type: string
+        symbol:
+          type: string
+        status:
+          type: string
+          enum: [RUNNING, STOPPED, PAUSED, ERROR]
+        pnlToday:
+          type: number
+        pnlAllTime:
+          type: number
+
+    # ─── BROKERS ──────────────────────────────────────────────────────────────
+    BrokerAccount:
+      type: object
+      required: [id, broker, platform, accountNumber, equity, status, server]
+      properties:
+        id:
+          type: integer
+        broker:
+          type: string
+        platform:
+          type: string
+          enum: [MT4, MT5]
+        accountNumber:
+          type: string
+        equity:
+          type: number
+        balance:
+          type: number
+        profit:
+          type: number
+        profitPercent:
+          type: number
+        status:
+          type: string
+          enum: [LIVE, DEMO]
+        server:
+          type: string
+        isConnected:
+          type: boolean
+
+    BrokerInput:
+      type: object
+      required: [broker, platform, login, password, server]
+      properties:
+        broker:
+          type: string
+        platform:
+          type: string
+          enum: [MT4, MT5]
+        login:
+          type: string
+        password:
+          type: string
+        server:
+          type: string
+
+    # ─── BOTS ────────────────────────────────────────────────────────────────
+    Bot:
+      type: object
+      required: [id, name, strategy, strategyType, account, market, timeframe, status, pnlToday, pnlAllTime, winRate]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        strategy:
+          type: string
+        strategyType:
+          type: string
+        account:
+          type: string
+        accountNumber:
+          type: string
+        market:
+          type: string
+        timeframe:
+          type: string
+        status:
+          type: string
+          enum: [RUNNING, STOPPED, PAUSED, ERROR]
+        pnlToday:
+          type: number
+        pnlTodayPercent:
+          type: number
+        pnlAllTime:
+          type: number
+        pnlAllTimePercent:
+          type: number
+        winRate:
+          type: number
+        isAI:
+          type: boolean
+
+    BotInput:
+      type: object
+      required: [name, strategy, account, market, timeframe]
+      properties:
+        name:
+          type: string
+        strategy:
+          type: string
+        account:
+          type: string
+        market:
+          type: string
+        timeframe:
+          type: string
+
+    BotUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [RUNNING, STOPPED, PAUSED]
+
+    BotStats:
+      type: object
+      required: [totalBots, running, stopped, paused, error, totalProfit, avgWinRate]
+      properties:
+        totalBots:
+          type: integer
+        running:
+          type: integer
+        stopped:
+          type: integer
+        paused:
+          type: integer
+        error:
+          type: integer
+        totalProfit:
+          type: number
+        avgWinRate:
+          type: number
+        newBotsThisWeek:
+          type: integer
+        runningChange:
+          type: integer
+        stoppedChange:
+          type: integer
+
+    BotPerformance:
+      type: object
+      required: [id, name, totalProfit, profitPercent, winRate]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        totalProfit:
+          type: number
+        profitPercent:
+          type: number
+        winRate:
+          type: number
+
+    BotLog:
+      type: object
+      required: [id, botName, message, time]
+      properties:
+        id:
+          type: integer
+        botName:
+          type: string
+        message:
+          type: string
+        time:
+          type: string
+
+    # ─── STRATEGIES ──────────────────────────────────────────────────────────
+    Strategy:
+      type: object
+      required: [id, name, status, market, symbol, timeframe, description]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, ACTIVE, DEPLOYED]
+        market:
+          type: string
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        description:
+          type: string
+        riskPerTrade:
+          type: number
+        takeProfit:
+          type: number
+        stopLoss:
+          type: number
+        trailingStop:
+          type: number
+        magicNumber:
+          type: ["integer", "null"]
+
+    StrategyInput:
+      type: object
+      required: [name, market, symbol, timeframe]
+      properties:
+        name:
+          type: string
+        market:
+          type: string
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        description:
+          type: string
+
+    StrategyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        riskPerTrade:
+          type: number
+        takeProfit:
+          type: number
+        stopLoss:
+          type: number
+
+    DeployInput:
+      type: object
+      required: [accountId, mode]
+      properties:
+        accountId:
+          type: integer
+        mode:
+          type: string
+          enum: [DEMO, LIVE]
+
+    BacktestSummary:
+      type: object
+      required: [netProfit, totalReturn, profitFactor, winRate, totalTrades, sharpeRatio, maxDrawdown, expectancy]
+      properties:
+        netProfit:
+          type: number
+        totalReturn:
+          type: number
+        profitFactor:
+          type: number
+        winRate:
+          type: number
+        totalTrades:
+          type: integer
+        sharpeRatio:
+          type: number
+        maxDrawdown:
+          type: number
+        expectancy:
+          type: number
+
+    # ─── MARKETPLACE ─────────────────────────────────────────────────────────
+    MarketplaceListing:
+      type: object
+      required: [id, name, type, description, winRate, profitFactor, maxDrawdown, price, author, rating, subscribers]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+        winRate:
+          type: number
+        profitFactor:
+          type: number
+        maxDrawdown:
+          type: number
+        price:
+          type: number
+        author:
+          type: string
+        authorRating:
+          type: number
+        rating:
+          type: number
+        subscribers:
+          type: integer
+        isSubscribed:
+          type: boolean
+        isPremium:
+          type: boolean
+        isNew:
+          type: boolean
+        market:
+          type: string
+        timeframe:
+          type: string
+
+    MarketplaceHighlights:
+      type: object
+      required: [mostProfitable, highestWinRate, lowestRisk, fastestGrowing, editorsChoice]
+      properties:
+        mostProfitable:
+          $ref: "#/components/schemas/HighlightItem"
+        highestWinRate:
+          $ref: "#/components/schemas/HighlightItem"
+        lowestRisk:
+          $ref: "#/components/schemas/HighlightItem"
+        fastestGrowing:
+          $ref: "#/components/schemas/HighlightItem"
+        editorsChoice:
+          $ref: "#/components/schemas/HighlightItem"
+
+    HighlightItem:
+      type: object
+      required: [name, value, label]
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        label:
+          type: string
+
+    StrategyAuthor:
+      type: object
+      required: [id, name, rating, strategiesCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        rating:
+          type: number
+        strategiesCount:
+          type: integer
+
+    # ─── BACKTESTING ─────────────────────────────────────────────────────────
+    Backtest:
+      type: object
+      required: [id, strategyName, account, symbol, timeframe, fromDate, toDate, status]
+      properties:
+        id:
+          type: integer
+        strategyName:
+          type: string
+        account:
+          type: string
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        fromDate:
+          type: string
+        toDate:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETE, FAILED]
+        netProfit:
+          type: ["number", "null"]
+        totalReturn:
+          type: ["number", "null"]
+        profitFactor:
+          type: ["number", "null"]
+        winRate:
+          type: ["number", "null"]
+        totalTrades:
+          type: ["integer", "null"]
+        sharpeRatio:
+          type: ["number", "null"]
+        maxDrawdown:
+          type: ["number", "null"]
+        expectancy:
+          type: ["number", "null"]
+        totalDays:
+          type: ["integer", "null"]
+        totalBars:
+          type: ["integer", "null"]
+        dataQuality:
+          type: ["number", "null"]
+        initialBalance:
+          type: number
+        leverage:
+          type: string
+        commission:
+          type: number
+        spread:
+          type: number
+
+    BacktestInput:
+      type: object
+      required: [strategyId, accountId, symbol, timeframe, fromDate, toDate, initialBalance]
+      properties:
+        strategyId:
+          type: integer
+        accountId:
+          type: integer
+        symbol:
+          type: string
+        timeframe:
+          type: string
+        fromDate:
+          type: string
+        toDate:
+          type: string
+        initialBalance:
+          type: number
+        leverage:
+          type: string
+        commission:
+          type: number
+        spread:
+          type: number
+
+    BacktestTrade:
+      type: object
+      required: [id, symbol, type, entryTime, entryPrice, exitTime, exitPrice, lots, profit, pips]
+      properties:
+        id:
+          type: integer
+        tradeNumber:
+          type: integer
+        symbol:
+          type: string
+        type:
+          type: string
+          enum: [BUY, SELL]
+        entryTime:
+          type: string
+        entryPrice:
+          type: number
+        exitTime:
+          type: string
+        exitPrice:
+          type: number
+        lots:
+          type: number
+        profit:
+          type: number
+        pips:
+          type: number
+
+    MonthlyPerformance:
+      type: object
+      required: [month, return_, profit]
+      properties:
+        month:
+          type: string
+        return_:
+          type: number
+        profit:
+          type: number
+
+    # ─── COPY TRADING ─────────────────────────────────────────────────────────
+    MasterTrader:
+      type: object
+      required: [id, name, strategy, roi, winRate, drawdown, followers, copiers, riskScore, maxDrawdown]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        strategy:
+          type: string
+        roi:
+          type: number
+        winRate:
+          type: number
+        drawdown:
+          type: number
+        followers:
+          type: integer
+        copiers:
+          type: integer
+        copiedAmount:
+          type: number
+        riskScore:
+          type: integer
+        maxDrawdown:
+          type: number
+        isVerified:
+          type: boolean
+        rank:
+          type: ["integer", "null"]
+
+    CopyPosition:
+      type: object
+      required: [id, traderName, status, roi, equity]
+      properties:
+        id:
+          type: integer
+        traderName:
+          type: string
+        status:
+          type: string
+          enum: [RUNNING, PAUSED, STOPPED]
+        roi:
+          type: number
+        equity:
+          type: number
+
+    CopyTradingStats:
+      type: object
+      required: [totalCopiedTrades, profitableTrades, avgWin, avgLoss, bestTrade, worstTrade, profitFactor, totalInvested, totalEquity]
+      properties:
+        totalCopiedTrades:
+          type: integer
+        profitableTrades:
+          type: integer
+        profitablePercent:
+          type: number
+        avgWin:
+          type: number
+        avgLoss:
+          type: number
+        bestTrade:
+          type: number
+        worstTrade:
+          type: number
+        profitFactor:
+          type: number
+        totalInvested:
+          type: number
+        totalEquity:
+          type: number
+        totalPnl:
+          type: number
+        totalPnlPercent:
+          type: number
+
+    CopyStrategy:
+      type: object
+      required: [id, name, usedByTraders, avgReturn, winRate, riskLevel]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        usedByTraders:
+          type: integer
+        avgReturn:
+          type: number
+        winRate:
+          type: number
+        riskLevel:
+          type: string
+          enum: [Low, Medium, High]
+
+    FollowInput:
+      type: object
+      required: [allocationPercent]
+      properties:
+        allocationPercent:
+          type: number
+        riskMultiplier:
+          type: number
+        fixedLot:
+          type: ["number", "null"]
+
+    # ─── PORTFOLIO ───────────────────────────────────────────────────────────
+    PortfolioOverview:
+      type: object
+      required: [totalEquity, netProfit, dailyPnl, totalReturn, sharpeRatio, maxDrawdown]
+      properties:
+        totalEquity:
+          type: number
+        netProfit:
+          type: number
+        dailyPnl:
+          type: number
+        totalReturn:
+          type: number
+        sharpeRatio:
+          type: number
+        maxDrawdown:
+          type: number
+        equityChange:
+          type: number
+        netProfitChange:
+          type: number
+        dailyPnlChange:
+          type: number
+        maxDrawdownChange:
+          type: number
+
+    AllocationItem:
+      type: object
+      required: [assetClass, percent, amount]
+      properties:
+        assetClass:
+          type: string
+        percent:
+          type: number
+        amount:
+          type: number
+
+    Holding:
+      type: object
+      required: [symbol, asset, type, quantity, avgPrice, currentPrice, marketValue, pnl, pnlPercent, allocation]
+      properties:
+        symbol:
+          type: string
+        asset:
+          type: string
+        type:
+          type: string
+          enum: [BUY, SELL]
+        quantity:
+          type: number
+        avgPrice:
+          type: number
+        currentPrice:
+          type: number
+        marketValue:
+          type: number
+        pnl:
+          type: number
+        pnlPercent:
+          type: number
+        allocation:
+          type: number
+
+    TopPositions:
+      type: object
+      required: [profitable, losing]
+      properties:
+        profitable:
+          type: array
+          items:
+            $ref: "#/components/schemas/PositionItem"
+        losing:
+          type: array
+          items:
+            $ref: "#/components/schemas/PositionItem"
+
+    PositionItem:
+      type: object
+      required: [rank, symbol, direction, pnl, pnlPercent]
+      properties:
+        rank:
+          type: integer
+        symbol:
+          type: string
+        direction:
+          type: string
+          enum: [BUY, SELL]
+        pnl:
+          type: number
+        pnlPercent:
+          type: number
+
+    MonthlyPerformanceRow:
+      type: object
+      required: [year, months]
+      properties:
+        year:
+          type: integer
+        months:
+          type: array
+          items:
+            type: ["number", "null"]
+
+    AccountBrokerSummary:
+      type: object
+      required: [broker, equity, profitPercent]
+      properties:
+        broker:
+          type: string
+        platform:
+          type: string
+        equity:
+          type: number
+        profitPercent:
+          type: number
+
+    # ─── RISK ────────────────────────────────────────────────────────────────
+    RiskOverview:
+      type: object
+      required: [riskScore, riskLabel, var_, expectedShortfall, dailyDrawdown, maxDrawdown, riskRewardRatio]
+      properties:
+        riskScore:
+          type: integer
+        riskLabel:
+          type: string
+        var_:
+          type: number
+        varPercent:
+          type: number
+        expectedShortfall:
+          type: number
+        expectedShortfallPercent:
+          type: number
+        dailyDrawdown:
+          type: number
+        dailyDrawdownPercent:
+          type: number
+        maxDrawdown:
+          type: number
+        maxDrawdownPercent:
+          type: number
+        riskRewardRatio:
+          type: number
+
+    ExposureItem:
+      type: object
+      required: [assetClass, percent, notional]
+      properties:
+        assetClass:
+          type: string
+        percent:
+          type: number
+        notional:
+          type: number
+
+    RiskLimit:
+      type: object
+      required: [rule, usage, limit, status]
+      properties:
+        rule:
+          type: string
+        usage:
+          type: number
+        limit:
+          type: number
+        usagePercent:
+          type: number
+        status:
+          type: string
+          enum: [Safe, Warning, Breach]
+
+    RiskLimitUpdate:
+      type: object
+      properties:
+        maxDailyLoss:
+          type: number
+        maxDrawdown:
+          type: number
+        maxPositionSize:
+          type: number
+        maxTotalExposure:
+          type: number
+
+    RiskAlert:
+      type: object
+      required: [id, type, title, message, severity, time]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [warning, info, danger]
+        time:
+          type: string
+
+    RiskyPosition:
+      type: object
+      required: [symbol, type, size, exposurePercent, riskScore, var_, pnl]
+      properties:
+        symbol:
+          type: string
+        type:
+          type: string
+          enum: [BUY, SELL]
+        size:
+          type: number
+        exposurePercent:
+          type: number
+        riskScore:
+          type: integer
+        var_:
+          type: number
+        pnl:
+          type: number
+
+    StressTest:
+      type: object
+      required: [scenario, marketMove, impactOnEquity, newEquity, riskLevel]
+      properties:
+        scenario:
+          type: string
+        marketMove:
+          type: string
+        impactOnEquity:
+          type: number
+        impactPercent:
+          type: number
+        newEquity:
+          type: number
+        riskLevel:
+          type: string
+          enum: [Low, Moderate, High]
+
+    RiskSummary:
+      type: object
+      required: [totalEquity, totalExposure, availableMargin, usedMargin, freeMargin, marginLevel, openPositions, riskScore]
+      properties:
+        totalEquity:
+          type: number
+        totalExposure:
+          type: number
+        totalExposurePercent:
+          type: number
+        availableMargin:
+          type: number
+        usedMargin:
+          type: number
+        freeMargin:
+          type: number
+        marginLevel:
+          type: number
+        openPositions:
+          type: integer
+        riskScore:
+          type: integer
+        riskLabel:
+          type: string
+
+    # ─── NOTIFICATIONS ───────────────────────────────────────────────────────
+    Notification:
+      type: object
+      required: [id, type, title, message, time, isRead]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [risk, bot, trade, system, account, security]
+        title:
+          type: string
+        message:
+          type: string
+        time:
+          type: string
+        isRead:
+          type: boolean
+        badge:
+          type: ["string", "null"]
+
+    NotificationSummary:
+      type: object
+      required: [total, unread, trading, system, account, security]
+      properties:
+        total:
+          type: integer
+        unread:
+          type: integer
+        trading:
+          type: integer
+        system:
+          type: integer
+        account:
+          type: integer
+        security:
+          type: integer
+
+    # ─── TRADES ──────────────────────────────────────────────────────────────
+    Trade:
+      type: object
+      required: [id, symbol, type, size, profit, time]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        type:
+          type: string
+          enum: [BUY, SELL]
+        size:
+          type: number
+        profit:
+          type: number
+        time:
+          type: string
+        entryPrice:
+          type: ["number", "null"]
+        exitPrice:
+          type: ["number", "null"]
+
+    TradeAnalytics:
+      type: object
+      required: [totalTrades, winningTrades, losingTrades, totalProfit, avgWin, avgLoss]
+      properties:
+        totalTrades:
+          type: integer
+        winningTrades:
+          type: integer
+        losingTrades:
+          type: integer
+        totalProfit:
+          type: number
+        avgWin:
+          type: number
+        avgLoss:
+        
+        
+          type: number
+
+    RecentTrade:
+      type: object
+      required: [id, symbol, type, size, profit, time]
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        type:
+          type: string
+          enum: [BUY, SELL]
+        size:
+          type: number
+        profit:
+          type: number
+        time:
+          type: string
