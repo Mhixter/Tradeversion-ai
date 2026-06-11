@@ -29,15 +29,13 @@ export default function AIMarketplace() {
           <div className="absolute right-0 top-0 opacity-20 pointer-events-none mix-blend-screen w-1/2 h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary to-transparent"></div>
         </div>
 
-        {/* Categories — horizontally scrollable on mobile */}
-        <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 pb-1">
-          <div className="flex gap-2 min-w-max sm:min-w-0 sm:flex-wrap">
-            {categories.map((c, i) => (
-              <Badge key={c} variant={i === 0 ? "default" : "secondary"} className="px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-primary hover:text-white transition-colors whitespace-nowrap">
-                {c}
-              </Badge>
-            ))}
-          </div>
+        {/* Categories — 2-row wrap on mobile, single row on desktop */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map((c, i) => (
+            <Badge key={c} variant={i === 0 ? "default" : "secondary"} className="px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-primary hover:text-white transition-colors whitespace-nowrap">
+              {c}
+            </Badge>
+          ))}
         </div>
 
         {/* Listings + Filters */}

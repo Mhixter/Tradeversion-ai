@@ -682,19 +682,28 @@ export default function Settings() {
 
         {/* Left Nav */}
         <div className="lg:w-56 shrink-0">
-          {/* Mobile: horizontal scroll pills */}
-          <div className="lg:hidden flex gap-1.5 overflow-x-auto pb-2 no-scrollbar">
+          {/* Mobile: 2×5 icon grid */}
+          <div className="lg:hidden grid grid-cols-5 gap-1.5">
             {SECTIONS.map(({ name, icon: Icon }) => (
               <button
                 key={name}
                 onClick={() => setActiveSection(name)}
                 data-testid={`tab-settings-${name.toLowerCase().replace(/[\s&]+/g, "-")}`}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0 border transition-colors ${activeSection === name ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-border"}`}
+                title={name}
+                className={`flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-colors ${activeSection === name ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground hover:border-primary/50 bg-card"}`}
               >
-                <Icon className="w-3 h-3" />
-                {name}
+                <Icon className="w-4 h-4" />
+                <span className="text-[9px] font-medium leading-tight text-center line-clamp-1">
+                  {name.replace(" & ", "/").replace(" Management", "").replace(" & Feeds", "")}
+                </span>
               </button>
             ))}
+          </div>
+          {/* Mobile: active section label */}
+          <div className="lg:hidden mt-2 px-1">
+            <p className="text-xs text-muted-foreground">
+              <span className="text-foreground font-semibold">{activeSection}</span>
+            </p>
           </div>
 
           {/* Desktop: vertical list */}
@@ -717,8 +726,8 @@ export default function Settings() {
         <div className="flex-1 min-w-0 flex flex-col lg:flex-row gap-4 lg:gap-6">
           <div className="flex-1 min-w-0">{renderSection()}</div>
 
-          {/* Right sidebar — security overview + danger zone, always visible */}
-          <div className="lg:w-72 shrink-0 flex flex-col gap-4">
+          {/* Right sidebar — security overview + danger zone, desktop only */}
+          <div className="hidden lg:flex lg:w-72 shrink-0 flex-col gap-4">
             <Card className="border-border bg-card">
               <CardHeader className="py-3 border-b border-border/50"><CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Security Overview</CardTitle></CardHeader>
               <CardContent className="p-4 space-y-3 text-sm">

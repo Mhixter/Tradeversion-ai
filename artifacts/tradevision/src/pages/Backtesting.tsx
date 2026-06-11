@@ -17,31 +17,45 @@ export default function Backtesting() {
     <Layout title="Backtesting" subtitle="Historical strategy performance analysis">
       <div className="flex flex-col gap-4 sm:gap-6">
         
-        {/* Filter Bar — scrollable on mobile */}
-        <div className="overflow-x-auto">
-          <div className="flex gap-2 p-3 bg-card border border-border rounded-lg items-center min-w-max sm:min-w-0 sm:flex-wrap">
-            <select className="bg-accent border border-border rounded px-2.5 py-1.5 text-xs sm:text-sm">
+        {/* Filter Bar — responsive grid on mobile */}
+        <div className="bg-card border border-border rounded-lg p-3 space-y-2.5">
+          {/* Row 1: Strategy + Account */}
+          <div className="grid grid-cols-2 gap-2">
+            <select className="bg-accent border border-border rounded px-2.5 py-2 text-xs sm:text-sm w-full">
               <option>AI Scalper Pro</option>
+              <option>Gold Hunter AI</option>
+              <option>London Breakout</option>
             </select>
-            <select className="bg-accent border border-border rounded px-2.5 py-1.5 text-xs sm:text-sm">
+            <select className="bg-accent border border-border rounded px-2.5 py-2 text-xs sm:text-sm w-full">
               <option>MT5 - IC Markets</option>
+              <option>MT4 - Pepperstone</option>
             </select>
-            <select className="bg-accent border border-border rounded px-2.5 py-1.5 text-xs sm:text-sm w-24">
-              <option>EURUSD</option>
-            </select>
-            <select className="bg-accent border border-border rounded px-2.5 py-1.5 text-xs sm:text-sm w-20">
-              <option>M15</option>
-            </select>
-            <input type="date" className="bg-accent border border-border rounded px-2.5 py-1.5 text-xs sm:text-sm" />
-            <span className="text-muted-foreground">-</span>
-            <input type="date" className="bg-accent border border-border rounded px-2.5 py-1.5 text-xs sm:text-sm" />
-            <Button className="bg-primary hover:bg-primary/90 text-xs sm:text-sm h-8 sm:h-9 shrink-0">Run Backtest</Button>
           </div>
+          {/* Row 2: Symbol + TF + Dates */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <select className="bg-accent border border-border rounded px-2.5 py-2 text-xs sm:text-sm w-full">
+              <option>EURUSD</option>
+              <option>XAUUSD</option>
+              <option>BTCUSD</option>
+            </select>
+            <select className="bg-accent border border-border rounded px-2.5 py-2 text-xs sm:text-sm w-full">
+              <option>M15</option>
+              <option>M30</option>
+              <option>H1</option>
+              <option>H4</option>
+            </select>
+            <input type="date" className="bg-accent border border-border rounded px-2.5 py-2 text-xs sm:text-sm w-full col-span-1 sm:col-span-1" />
+            <input type="date" className="bg-accent border border-border rounded px-2.5 py-2 text-xs sm:text-sm w-full col-span-1 sm:col-span-1" />
+          </div>
+          {/* Row 3: Run button */}
+          <Button className="bg-primary hover:bg-primary/90 text-xs sm:text-sm h-9 w-full sm:w-auto sm:ml-auto sm:flex sm:self-end">
+            Run Backtest
+          </Button>
         </div>
 
         {/* Tabs — scrollable on mobile */}
-        <div className="overflow-x-auto">
-          <div className="flex gap-1 border-b border-border min-w-max sm:min-w-0">
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="flex gap-1 border-b border-border min-w-max">
             {["Overview", "Performance", "Trades", "Risk Analysis", "Equity Curve", "Monthly Report"].map((t, i) => (
               <div key={t} className={`pb-2 px-2 sm:px-3 text-xs sm:text-sm font-medium cursor-pointer whitespace-nowrap ${i === 0 ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'}`}>
                 {t}
