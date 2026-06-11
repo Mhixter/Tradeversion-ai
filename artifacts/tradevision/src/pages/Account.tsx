@@ -12,81 +12,81 @@ export default function Account() {
 
   return (
     <Layout title="Account & Profile" subtitle="Manage your identity and broker connections">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:gap-6">
         
-        {/* Header Stats */}
-        <div className="grid grid-cols-4 gap-4">
+        {/* Header Stats — 2 cols on mobile, 4 on desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <Card className="border-border bg-card">
-            <CardContent className="p-4 flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground font-medium mb-1">Profile Completion</p>
-                <h3 className="text-2xl font-bold">92%</h3>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Profile Completion</p>
+                <h3 className="text-xl sm:text-2xl font-bold">92%</h3>
               </div>
             </CardContent>
           </Card>
           <Card className="border-border bg-card">
-            <CardContent className="p-4 flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground font-medium mb-1">Verification Status</p>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5 text-success" />
-                  <h3 className="text-xl font-bold text-success">Verified</h3>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Verification</p>
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-success" />
+                  <h3 className="text-sm sm:text-lg font-bold text-success">Verified</h3>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="border-border bg-card">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium mb-1">Connected Brokers</p>
-                <h3 className="text-2xl font-bold">{brokers?.length || 5}</h3>
-              </div>
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Connected Brokers</p>
+              <h3 className="text-xl sm:text-2xl font-bold">{brokers?.length || 5}</h3>
             </CardContent>
           </Card>
           <Card className="border-border bg-card">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-medium mb-1">Subscription Plan</p>
-                <div className="flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-primary" />
-                  <h3 className="text-xl font-bold text-primary">Professional</h3>
-                </div>
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Plan</p>
+              <div className="flex items-center gap-1.5">
+                <Crown className="w-4 h-4 text-primary" />
+                <h3 className="text-sm sm:text-lg font-bold text-primary">Professional</h3>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-8 flex flex-col gap-6">
+        {/* Main — stacked on mobile, side-by-side on lg */}
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 sm:gap-6">
+          <div className="lg:col-span-8 flex flex-col gap-4 sm:gap-6">
             
             {/* Profile Info */}
             <Card className="border-border bg-card">
-              <CardHeader className="py-4 border-b border-border/50 flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Profile Information</CardTitle>
-                <Button variant="outline" size="sm">Edit Profile</Button>
+              <CardHeader className="py-3 sm:py-4 border-b border-border/50 flex flex-row items-center justify-between px-4">
+                <CardTitle className="text-sm sm:text-base">Profile Information</CardTitle>
+                <Button variant="outline" size="sm" className="text-xs h-7 sm:h-8">Edit Profile</Button>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-6">
-                  <Avatar className="w-24 h-24 border-2 border-border">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+                  <Avatar className="w-16 h-16 sm:w-24 sm:h-24 border-2 border-border shrink-0">
                     <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026024d" />
                     <AvatarFallback>JT</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-y-4 sm:gap-x-8 text-sm w-full">
                     <div>
-                      <span className="text-muted-foreground block mb-1">Full Name</span>
-                      <span className="font-medium">John Trader</span>
+                      <span className="text-muted-foreground text-xs block mb-0.5">Full Name</span>
+                      <span className="font-medium text-sm">John Trader</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block mb-1">Username</span>
-                      <span className="font-medium">@johntrader_pro</span>
+                      <span className="text-muted-foreground text-xs block mb-0.5">Username</span>
+                      <span className="font-medium text-sm">@johntrader_pro</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block mb-1">Email</span>
-                      <span className="font-medium flex items-center gap-2">john@tradevision.com <Badge className="bg-success/20 text-success hover:bg-success/20 text-[10px] h-5 px-1">Verified</Badge></span>
+                      <span className="text-muted-foreground text-xs block mb-0.5">Email</span>
+                      <span className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                        john@tradevision.com 
+                        <Badge className="bg-success/20 text-success hover:bg-success/20 text-[10px] h-5 px-1">Verified</Badge>
+                      </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block mb-1">Phone Number</span>
-                      <span className="font-medium">+1 (555) 123-4567</span>
+                      <span className="text-muted-foreground text-xs block mb-0.5">Phone Number</span>
+                      <span className="font-medium text-sm">+1 (555) 123-4567</span>
                     </div>
                   </div>
                 </div>
@@ -95,27 +95,24 @@ export default function Account() {
 
             {/* Broker Accounts */}
             <Card className="border-border bg-card">
-              <CardHeader className="py-4 border-b border-border/50 flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Broker Accounts</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">Manage Connections</Button>
-                  <Button size="sm" className="bg-primary hover:bg-primary/90">Connect New Broker</Button>
-                </div>
+              <CardHeader className="py-3 sm:py-4 border-b border-border/50 flex flex-row items-center justify-between px-4">
+                <CardTitle className="text-sm sm:text-base">Broker Accounts</CardTitle>
+                <Button size="sm" className="bg-primary hover:bg-primary/90 text-xs h-7 sm:h-8">+ Connect</Button>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-border/50">
                   {brokers?.map(b => (
-                    <div key={b.id} className="p-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded bg-accent flex items-center justify-center font-bold text-xs">{b.platform}</div>
-                        <div>
-                          <p className="font-semibold text-sm">{b.broker}</p>
-                          <p className="text-xs text-muted-foreground">{b.accountNumber} • {b.server}</p>
+                    <div key={b.id} className="p-3 sm:p-4 flex items-center justify-between hover:bg-accent/50 transition-colors">
+                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded bg-accent flex items-center justify-center font-bold text-[10px] sm:text-xs shrink-0">{b.platform}</div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs sm:text-sm truncate">{b.broker}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{b.accountNumber} • {b.server}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <Badge className="bg-success/20 text-success hover:bg-success/30 mb-1 border-success/30">Connected</Badge>
-                        <p className="text-sm font-bold">${b.equity.toLocaleString()}</p>
+                      <div className="text-right shrink-0 ml-2">
+                        <Badge className="bg-success/20 text-success hover:bg-success/30 mb-0.5 border-success/30 text-[10px]">Connected</Badge>
+                        <p className="text-xs sm:text-sm font-bold">${b.equity.toLocaleString()}</p>
                       </div>
                     </div>
                   ))}
@@ -128,36 +125,36 @@ export default function Account() {
 
           </div>
 
-          <div className="col-span-4 flex flex-col gap-6">
+          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-6">
             <Card className="border-border bg-card">
-              <CardHeader className="py-4 border-b border-border/50">
+              <CardHeader className="py-3 sm:py-4 border-b border-border/50 px-4">
                 <CardTitle className="text-sm">Profile Summary</CardTitle>
               </CardHeader>
-              <CardContent className="p-6 flex flex-col items-center text-center">
-                 <Avatar className="w-20 h-20 mb-3 border-2 border-primary">
+              <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center">
+                 <Avatar className="w-16 h-16 sm:w-20 sm:h-20 mb-2 sm:mb-3 border-2 border-primary">
                     <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026024d" />
                     <AvatarFallback>JT</AvatarFallback>
                   </Avatar>
-                  <Badge className="bg-primary mb-2">PRO</Badge>
-                  <h3 className="text-lg font-bold">John Trader</h3>
-                  <p className="text-xs text-muted-foreground mb-6">Member Since: Jan 2023</p>
+                  <Badge className="bg-primary mb-1.5 sm:mb-2 text-xs">PRO</Badge>
+                  <h3 className="text-base sm:text-lg font-bold">John Trader</h3>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-4 sm:mb-6">Member Since: Jan 2023</p>
 
-                  <div className="w-full bg-accent rounded-lg p-4 grid grid-cols-2 gap-4 text-left mb-6">
+                  <div className="w-full bg-accent rounded-lg p-3 sm:p-4 grid grid-cols-2 gap-3 sm:gap-4 text-left">
                     <div>
-                      <span className="text-xs text-muted-foreground block mb-1">Lifetime Profit</span>
-                      <span className="text-sm font-bold text-success">+$215,743.25</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground block mb-0.5">Lifetime Profit</span>
+                      <span className="text-xs sm:text-sm font-bold text-success">+$215,743</span>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground block mb-1">Win Rate</span>
-                      <span className="text-sm font-bold text-foreground">78.45%</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground block mb-0.5">Win Rate</span>
+                      <span className="text-xs sm:text-sm font-bold text-foreground">78.45%</span>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground block mb-1">Strategies</span>
-                      <span className="text-sm font-bold text-foreground">23</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground block mb-0.5">Strategies</span>
+                      <span className="text-xs sm:text-sm font-bold text-foreground">23</span>
                     </div>
                     <div>
-                      <span className="text-xs text-muted-foreground block mb-1">Active Bots</span>
-                      <span className="text-sm font-bold text-foreground">7</span>
+                      <span className="text-[10px] sm:text-xs text-muted-foreground block mb-0.5">Active Bots</span>
+                      <span className="text-xs sm:text-sm font-bold text-foreground">7</span>
                     </div>
                   </div>
               </CardContent>

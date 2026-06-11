@@ -15,10 +15,10 @@ export default function Portfolio() {
 
   return (
     <Layout title="Portfolio" subtitle="Detailed analysis of your investments and assets">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:gap-6">
         
-        {/* Top Stats */}
-        <div className="grid grid-cols-6 gap-4">
+        {/* Top Stats — 3 cols on mobile, 6 on desktop */}
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-4">
           <StatBox title="Total Equity" value={overview?.totalEquity} prefix="$" isCurrency isLoading={isOverviewLoading} />
           <StatBox title="Net Profit" value={overview?.netProfit} prefix="$" isCurrency isLoading={isOverviewLoading} valueClass="text-success" />
           <StatBox title="Daily P&L" value={overview?.dailyPnl} prefix="$" isCurrency isLoading={isOverviewLoading} />
@@ -27,13 +27,15 @@ export default function Portfolio() {
           <StatBox title="Max Drawdown" value={overview?.maxDrawdown} suffix="%" isLoading={isOverviewLoading} valueClass="text-destructive" />
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          <Card className="col-span-4 border-border bg-card">
-            <CardHeader>
+        {/* Chart + Table — stacked on mobile, side-by-side on lg */}
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 sm:gap-6">
+          {/* Pie chart — full width on mobile, 4 cols on desktop */}
+          <Card className="lg:col-span-4 border-border bg-card">
+            <CardHeader className="px-4">
               <CardTitle className="text-sm">Asset Allocation</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col items-center">
-              <div className="h-64 w-full">
+            <CardContent className="flex flex-col items-center px-4">
+              <div className="h-52 w-full max-w-xs mx-auto">
                 {isAllocationLoading ? <Skeleton className="w-full h-full rounded-full" /> : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -41,8 +43,8 @@ export default function Portfolio() {
                         data={allocation || []}
                         cx="50%"
                         cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
+                        innerRadius={55}
+                        outerRadius={85}
                         paddingAngle={2}
                         dataKey="percent"
                         stroke="none"
@@ -59,63 +61,66 @@ export default function Portfolio() {
                   </ResponsiveContainer>
                 )}
               </div>
-              <div className="w-full mt-4 space-y-2">
+              <div className="w-full mt-3 grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-2">
                 {allocation?.map((item, i) => (
                   <div key={item.assetClass} className="flex justify-between items-center text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
-                      <span>{item.assetClass}</span>
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }}></div>
+                      <span className="text-xs">{item.assetClass}</span>
                     </div>
-                    <span className="font-medium">{item.percent}%</span>
+                    <span className="font-medium text-xs">{item.percent}%</span>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-8 border-border bg-card">
-            <CardHeader>
+          {/* Holdings table — full width on mobile, 8 cols on desktop */}
+          <Card className="lg:col-span-8 border-border bg-card">
+            <CardHeader className="px-4">
               <CardTitle className="text-sm">Holdings Overview</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border bg-accent/30 hover:bg-accent/30">
-                    <TableHead>Symbol</TableHead>
-                    <TableHead>Asset Class</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Avg Price</TableHead>
-                    <TableHead className="text-right">Current Price</TableHead>
-                    <TableHead className="text-right">P&L</TableHead>
-                    <TableHead className="text-right">Alloc %</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isHoldingsLoading ? (
-                    Array(6).fill(0).map((_, i) => (
-                      <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
-                    ))
-                  ) : holdings?.map((holding, i) => (
-                    <TableRow key={i} className="border-border">
-                      <TableCell className="font-semibold text-xs">{holding.symbol}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{holding.asset}</TableCell>
-                      <TableCell>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${holding.type === 'BUY' ? 'bg-buy/10 text-buy' : 'bg-sell/10 text-sell'}`}>
-                          {holding.type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-right">{holding.quantity}</TableCell>
-                      <TableCell className="text-xs text-right">${holding.avgPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
-                      <TableCell className="text-xs text-right font-medium">${holding.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
-                      <TableCell className={`text-xs text-right font-bold ${holding.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {holding.pnl >= 0 ? '+' : ''}${holding.pnl.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                      </TableCell>
-                      <TableCell className="text-xs text-right">{holding.allocation}%</TableCell>
+            <CardContent className="px-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border bg-accent/30 hover:bg-accent/30">
+                      <TableHead className="pl-4 whitespace-nowrap">Symbol</TableHead>
+                      <TableHead className="hidden sm:table-cell whitespace-nowrap">Asset Class</TableHead>
+                      <TableHead className="whitespace-nowrap">Type</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Qty</TableHead>
+                      <TableHead className="text-right hidden md:table-cell whitespace-nowrap">Avg Price</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Price</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">P&L</TableHead>
+                      <TableHead className="text-right hidden sm:table-cell whitespace-nowrap">Alloc %</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {isHoldingsLoading ? (
+                      Array(6).fill(0).map((_, i) => (
+                        <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                      ))
+                    ) : holdings?.map((holding, i) => (
+                      <TableRow key={i} className="border-border">
+                        <TableCell className="font-semibold text-xs pl-4 whitespace-nowrap">{holding.symbol}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap">{holding.asset}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${holding.type === 'BUY' ? 'bg-buy/10 text-buy' : 'bg-sell/10 text-sell'}`}>
+                            {holding.type}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs text-right whitespace-nowrap">{holding.quantity}</TableCell>
+                        <TableCell className="text-xs text-right hidden md:table-cell whitespace-nowrap">${holding.avgPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
+                        <TableCell className="text-xs text-right font-medium whitespace-nowrap">${holding.currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</TableCell>
+                        <TableCell className={`text-xs text-right font-bold whitespace-nowrap ${holding.pnl >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {holding.pnl >= 0 ? '+' : ''}${holding.pnl.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        </TableCell>
+                        <TableCell className="text-xs text-right hidden sm:table-cell whitespace-nowrap">{holding.allocation}%</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -127,10 +132,10 @@ export default function Portfolio() {
 function StatBox({ title, value, prefix = "", suffix = "", isLoading, valueClass = "text-foreground", isCurrency = false }: any) {
   return (
     <Card className="border-border bg-card">
-      <CardContent className="p-4 flex flex-col justify-center gap-1">
-        <p className="text-xs font-medium text-muted-foreground">{title}</p>
-        {isLoading ? <Skeleton className="h-8 w-24" /> : (
-          <h3 className={`text-xl font-bold ${valueClass}`}>
+      <CardContent className="p-2.5 sm:p-4 flex flex-col justify-center gap-0.5 sm:gap-1">
+        <p className="text-[10px] sm:text-xs font-medium text-muted-foreground leading-tight">{title}</p>
+        {isLoading ? <Skeleton className="h-6 sm:h-8 w-16 sm:w-24" /> : (
+          <h3 className={`text-sm sm:text-xl font-bold leading-tight ${valueClass}`}>
             {prefix}{value != null ? value.toLocaleString(undefined, { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: 2 }) : 0}{suffix}
           </h3>
         )}
