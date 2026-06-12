@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +22,7 @@ import KYC from "@/pages/KYC";
 import Billing from "@/pages/Billing";
 import Landing from "@/pages/Landing";
 import Signup from "@/pages/Signup";
+import CompanyAdminPortal from "@/pages/CompanyAdminPortal";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -76,12 +77,23 @@ function AuthedApp() {
   return <Router />;
 }
 
+/* Dispatch to company admin portal without requiring Replit auth */
+function AppRouter() {
+  const [location] = useLocation();
+
+  if (location === "/company-admin" || location.startsWith("/company-admin/")) {
+    return <CompanyAdminPortal />;
+  }
+
+  return <AuthedApp />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AuthedApp />
+          <AppRouter />
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

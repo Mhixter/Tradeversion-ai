@@ -55,7 +55,7 @@ router.post("/backtests", async (req, res) => {
 router.get("/backtests/:id", async (req, res) => {
   try {
     const [row] = await db.select().from(backtestsTable).where(eq(backtestsTable.id, parseInt(req.params.id)));
-    if (!row) return res.status(404).json({ error: "Not found" });
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json(mapBacktest(row));
   } catch (e) {
     req.log.error(e);

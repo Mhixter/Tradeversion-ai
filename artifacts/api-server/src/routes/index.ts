@@ -15,6 +15,7 @@ import tradesRouter from "./trades";
 import kycRouter from "./kyc";
 import billingRouter from "./billing";
 import companyRouter from "./company";
+import companyAdminRouter from "./companyadmin";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(tradesRouter);
 router.use(kycRouter);
 router.use(billingRouter);
 router.use(companyRouter);
+router.use(companyAdminRouter);
 
 export default router;

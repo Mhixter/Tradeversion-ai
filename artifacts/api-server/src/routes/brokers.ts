@@ -22,7 +22,7 @@ router.get("/brokers", async (req, res) => {
 router.post("/brokers", async (req, res) => {
   try {
     const parsed = ConnectBrokerBody.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: "Invalid request" });
+    if (!parsed.success) { res.status(400).json({ error: "Invalid request" }); return; }
     const { broker, platform, server } = parsed.data;
     const [inserted] = await db.insert(brokersTable).values({
       broker, platform, server,

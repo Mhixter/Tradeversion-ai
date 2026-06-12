@@ -43,7 +43,7 @@ router.patch("/notifications/:id/read", async (req, res) => {
       .set({ isRead: true })
       .where(eq(notificationsTable.id, parseInt(req.params.id)))
       .returning();
-    if (!updated) return res.status(404).json({ error: "Not found" });
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
     res.json(mapNotif(updated));
   } catch (e) {
     req.log.error(e);
