@@ -2,156 +2,191 @@ import React, { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import {
   Building2, Users, Shield, Crown, Eye, TrendingUp, Bot,
-  Settings, Check, X, Plus, Mail, MoreHorizontal, Search,
-  ChevronDown, Activity, Clock, AlertTriangle, CheckCircle2,
-  UserPlus, Trash2, Edit2, Lock,
+  Settings, Check, X, Mail, Search, Activity, Clock,
+  AlertTriangle, CheckCircle2, UserPlus, Trash2, Edit2,
+  Lock, MapPin, CalendarDays, Sparkles, ChevronRight,
 } from "lucide-react";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+/* ─── Types ──────────────────────────────────────────────────────────────── */
 type Role = "Owner" | "Admin" | "Manager" | "Trader" | "Viewer";
 type MemberStatus = "Active" | "Pending" | "Suspended";
 
 interface Member {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  role: Role;
-  status: MemberStatus;
-  joined: string;
-  lastActive: string;
-  bots: number;
-  pnl: string;
+  id: string; name: string; email: string; avatar: string;
+  role: Role; status: MemberStatus; joined: string;
+  lastActive: string; bots: number; pnl: string;
 }
 
-// ── Role config ───────────────────────────────────────────────────────────────
-const ROLE_CONFIG: Record<Role, { color: string; bg: string; icon: React.ElementType; description: string }> = {
-  Owner:   { color: "text-purple-400",  bg: "bg-purple-500/15 border-purple-500/30",  icon: Crown,     description: "Full platform access, billing & company settings" },
-  Admin:   { color: "text-red-400",     bg: "bg-red-500/15 border-red-500/30",        icon: Shield,    description: "Manage team, bots & strategies. No billing access" },
-  Manager: { color: "text-blue-400",    bg: "bg-blue-500/15 border-blue-500/30",      icon: Settings,  description: "View all data, manage assigned bots & strategies" },
-  Trader:  { color: "text-success",     bg: "bg-success/15 border-success/30",        icon: TrendingUp, description: "Execute trades, manage own bots & strategies only" },
-  Viewer:  { color: "text-gray-400",    bg: "bg-gray-500/10 border-gray-500/20",      icon: Eye,       description: "Read-only access to all data, no execution rights" },
+/* ─── Role config ─────────────────────────────────────────────────────────── */
+const RC: Record<Role, {
+  icon: React.ElementType; description: string;
+  pill: string; ring: string; glow: string;
+  headerBg: string; dot: string;
+}> = {
+  Owner:   { icon: Crown,     description: "Full platform access, billing & company settings",         pill: "bg-gradient-to-r from-purple-600 to-violet-500 text-white",          ring: "ring-purple-500/60",  glow: "shadow-purple-500/20",  headerBg: "from-purple-600/20 to-violet-600/5",  dot: "bg-purple-400"  },
+  Admin:   { icon: Shield,    description: "Manage team, bots & strategies. No billing access",        pill: "bg-gradient-to-r from-red-600 to-rose-500 text-white",               ring: "ring-red-500/60",     glow: "shadow-red-500/20",     headerBg: "from-red-600/20 to-rose-600/5",       dot: "bg-red-400"     },
+  Manager: { icon: Settings,  description: "View all data, manage assigned bots & strategies",        pill: "bg-gradient-to-r from-blue-600 to-cyan-500 text-white",              ring: "ring-blue-500/60",    glow: "shadow-blue-500/20",    headerBg: "from-blue-600/20 to-cyan-600/5",      dot: "bg-blue-400"    },
+  Trader:  { icon: TrendingUp, description: "Execute trades, manage own bots & strategies only",      pill: "bg-gradient-to-r from-emerald-600 to-green-500 text-white",          ring: "ring-emerald-500/60", glow: "shadow-emerald-500/20", headerBg: "from-emerald-600/20 to-green-600/5",  dot: "bg-emerald-400" },
+  Viewer:  { icon: Eye,       description: "Read-only access to all data, no execution rights",       pill: "bg-gradient-to-r from-gray-600 to-slate-500 text-white",             ring: "ring-gray-500/40",    glow: "shadow-gray-500/10",    headerBg: "from-gray-600/10 to-slate-600/5",     dot: "bg-gray-400"    },
 };
 
-// ── Permission matrix ─────────────────────────────────────────────────────────
-const PERMISSIONS: { label: string; icon: React.ElementType; owner: boolean; admin: boolean; manager: boolean; trader: boolean; viewer: boolean }[] = [
-  { label: "View Dashboard",        icon: TrendingUp, owner: true,  admin: true,  manager: true,  trader: true,  viewer: true  },
-  { label: "Execute Trades",        icon: TrendingUp, owner: true,  admin: true,  manager: false, trader: true,  viewer: false },
-  { label: "Manage Own Bots",       icon: Bot,        owner: true,  admin: true,  manager: true,  trader: true,  viewer: false },
-  { label: "Manage All Bots",       icon: Bot,        owner: true,  admin: true,  manager: true,  trader: false, viewer: false },
-  { label: "Create Strategies",     icon: Shield,     owner: true,  admin: true,  manager: true,  trader: true,  viewer: false },
-  { label: "Risk Settings",         icon: AlertTriangle, owner: true, admin: true, manager: true, trader: false, viewer: false },
-  { label: "Invite Members",        icon: UserPlus,   owner: true,  admin: true,  manager: false, trader: false, viewer: false },
-  { label: "Manage Roles",          icon: Shield,     owner: true,  admin: true,  manager: false, trader: false, viewer: false },
-  { label: "View Analytics",        icon: TrendingUp, owner: true,  admin: true,  manager: true,  trader: true,  viewer: true  },
-  { label: "API Key Management",    icon: Lock,       owner: true,  admin: true,  manager: false, trader: false, viewer: false },
-  { label: "Billing & Plan",        icon: Crown,      owner: true,  admin: false, manager: false, trader: false, viewer: false },
-  { label: "Company Settings",      icon: Building2,  owner: true,  admin: false, manager: false, trader: false, viewer: false },
+/* ─── Permissions ─────────────────────────────────────────────────────────── */
+const PERMS = [
+  { label: "View Dashboard",      icon: TrendingUp,    owner: true,  admin: true,  manager: true,  trader: true,  viewer: true  },
+  { label: "Execute Trades",      icon: TrendingUp,    owner: true,  admin: true,  manager: false, trader: true,  viewer: false },
+  { label: "Manage Own Bots",     icon: Bot,           owner: true,  admin: true,  manager: true,  trader: true,  viewer: false },
+  { label: "Manage All Bots",     icon: Bot,           owner: true,  admin: true,  manager: true,  trader: false, viewer: false },
+  { label: "Create Strategies",   icon: Shield,        owner: true,  admin: true,  manager: true,  trader: true,  viewer: false },
+  { label: "Risk Settings",       icon: AlertTriangle, owner: true,  admin: true,  manager: true,  trader: false, viewer: false },
+  { label: "Invite Members",      icon: UserPlus,      owner: true,  admin: true,  manager: false, trader: false, viewer: false },
+  { label: "Manage Roles",        icon: Shield,        owner: true,  admin: true,  manager: false, trader: false, viewer: false },
+  { label: "View Analytics",      icon: TrendingUp,    owner: true,  admin: true,  manager: true,  trader: true,  viewer: true  },
+  { label: "API Key Management",  icon: Lock,          owner: true,  admin: true,  manager: false, trader: false, viewer: false },
+  { label: "Billing & Plan",      icon: Crown,         owner: true,  admin: false, manager: false, trader: false, viewer: false },
+  { label: "Company Settings",    icon: Building2,     owner: true,  admin: false, manager: false, trader: false, viewer: false },
 ];
 
-// ── Seed data ─────────────────────────────────────────────────────────────────
-const INITIAL_MEMBERS: Member[] = [
-  { id: "1", name: "John Trader",    email: "john@tradevision.com",    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d", role: "Owner",   status: "Active",    joined: "Jan 12, 2024", lastActive: "Just now",     bots: 5,  pnl: "+$15,248" },
-  { id: "2", name: "Sarah Chen",     email: "sarah@tradevision.com",   avatar: "https://i.pravatar.cc/150?u=b04e5b8e8f3e8e8e8e8e", role: "Admin",   status: "Active",    joined: "Feb 3, 2024",  lastActive: "2 min ago",    bots: 3,  pnl: "+$8,420"  },
-  { id: "3", name: "Marcus Webb",    email: "marcus@tradevision.com",  avatar: "https://i.pravatar.cc/150?u=c04e5b8e8f3e8e8e8e8e", role: "Manager", status: "Active",    joined: "Feb 18, 2024", lastActive: "1 hr ago",     bots: 2,  pnl: "+$3,910"  },
-  { id: "4", name: "Alex Rivera",    email: "alex@tradevision.com",    avatar: "https://i.pravatar.cc/150?u=d04e5b8e8f3e8e8e8e8e", role: "Trader",  status: "Active",    joined: "Mar 5, 2024",  lastActive: "3 hrs ago",    bots: 1,  pnl: "+$2,105"  },
-  { id: "5", name: "Priya Sharma",   email: "priya@tradevision.com",   avatar: "https://i.pravatar.cc/150?u=e04e5b8e8f3e8e8e8e8e", role: "Trader",  status: "Active",    joined: "Mar 22, 2024", lastActive: "Yesterday",    bots: 1,  pnl: "-$340"    },
-  { id: "6", name: "Daniel Park",    email: "daniel@tradevision.com",  avatar: "https://i.pravatar.cc/150?u=f04e5b8e8f3e8e8e8e8e", role: "Viewer",  status: "Active",    joined: "Apr 10, 2024", lastActive: "3 days ago",   bots: 0,  pnl: "$0"       },
-  { id: "7", name: "Emma Wilson",    email: "emma@tradevision.com",    avatar: "https://i.pravatar.cc/150?u=g04e5b8e8f3e8e8e8e8e", role: "Trader",  status: "Pending",   joined: "May 2, 2024",  lastActive: "Never",        bots: 0,  pnl: "$0"       },
-  { id: "8", name: "Tom Bradley",    email: "tom@tradevision.com",     avatar: "https://i.pravatar.cc/150?u=h04e5b8e8f3e8e8e8e8e", role: "Viewer",  status: "Suspended", joined: "Jan 30, 2024", lastActive: "2 weeks ago",  bots: 0,  pnl: "$0"       },
+/* ─── Seed data ───────────────────────────────────────────────────────────── */
+const INIT: Member[] = [
+  { id:"1", name:"John Trader",  email:"john@tradevision.com",   avatar:"https://i.pravatar.cc/150?u=a042581f4e29026024d", role:"Owner",   status:"Active",    joined:"Jan 12, 2024", lastActive:"Just now",    bots:5, pnl:"+$15,248" },
+  { id:"2", name:"Sarah Chen",   email:"sarah@tradevision.com",  avatar:"https://i.pravatar.cc/150?u=b04e5b8e8f3e8e8e8e8e",role:"Admin",   status:"Active",    joined:"Feb 3, 2024",  lastActive:"2 min ago",   bots:3, pnl:"+$8,420"  },
+  { id:"3", name:"Marcus Webb",  email:"marcus@tradevision.com", avatar:"https://i.pravatar.cc/150?u=c04e5b8e8f3e8e8e8e8e",role:"Manager", status:"Active",    joined:"Feb 18, 2024", lastActive:"1 hr ago",    bots:2, pnl:"+$3,910"  },
+  { id:"4", name:"Alex Rivera",  email:"alex@tradevision.com",   avatar:"https://i.pravatar.cc/150?u=d04e5b8e8f3e8e8e8e8e",role:"Trader",  status:"Active",    joined:"Mar 5, 2024",  lastActive:"3 hrs ago",   bots:1, pnl:"+$2,105"  },
+  { id:"5", name:"Priya Sharma", email:"priya@tradevision.com",  avatar:"https://i.pravatar.cc/150?u=e04e5b8e8f3e8e8e8e8e",role:"Trader",  status:"Active",    joined:"Mar 22, 2024", lastActive:"Yesterday",   bots:1, pnl:"-$340"    },
+  { id:"6", name:"Daniel Park",  email:"daniel@tradevision.com", avatar:"https://i.pravatar.cc/150?u=f04e5b8e8f3e8e8e8e8e",role:"Viewer",  status:"Active",    joined:"Apr 10, 2024", lastActive:"3 days ago",  bots:0, pnl:"$0"       },
+  { id:"7", name:"Emma Wilson",  email:"emma@tradevision.com",   avatar:"https://i.pravatar.cc/150?u=g04e5b8e8f3e8e8e8e8e",role:"Trader",  status:"Pending",   joined:"May 2, 2024",  lastActive:"Never",       bots:0, pnl:"$0"       },
+  { id:"8", name:"Tom Bradley",  email:"tom@tradevision.com",    avatar:"https://i.pravatar.cc/150?u=h04e5b8e8f3e8e8e8e8e",role:"Viewer",  status:"Suspended", joined:"Jan 30, 2024", lastActive:"2 wks ago",   bots:0, pnl:"$0"       },
 ];
 
-const ACTIVITY_LOG = [
-  { id: 1, user: "John Trader",  action: "Changed Sarah Chen's role to Admin",           time: "5 min ago",   type: "role"    },
-  { id: 2, user: "Sarah Chen",   action: "Invited emma@tradevision.com as Trader",        time: "2 hrs ago",   type: "invite"  },
-  { id: 3, user: "John Trader",  action: "Suspended Tom Bradley's account",               time: "2 weeks ago", type: "suspend" },
-  { id: 4, user: "Marcus Webb",  action: "Created strategy 'XAUUSD Scalper' for team",   time: "3 days ago",  type: "create"  },
-  { id: 5, user: "John Trader",  action: "Updated company risk limits",                   time: "1 week ago",  type: "settings"},
-  { id: 6, user: "Alex Rivera",  action: "Joined as Trader",                              time: "Mar 5, 2024", type: "join"    },
+const ACTIVITY = [
+  { id:1, user:"John Trader",  avatar:"https://i.pravatar.cc/150?u=a042581f4e29026024d", action:"Changed Sarah Chen's role to Admin",         time:"5 min ago",   type:"role"    },
+  { id:2, user:"Sarah Chen",   avatar:"https://i.pravatar.cc/150?u=b04e5b8e8f3e8e8e8e8e", action:"Invited emma@tradevision.com as Trader",      time:"2 hrs ago",   type:"invite"  },
+  { id:3, user:"John Trader",  avatar:"https://i.pravatar.cc/150?u=a042581f4e29026024d", action:"Suspended Tom Bradley's account",              time:"2 weeks ago", type:"suspend" },
+  { id:4, user:"Marcus Webb",  avatar:"https://i.pravatar.cc/150?u=c04e5b8e8f3e8e8e8e8e", action:"Created strategy 'XAUUSD Scalper' for team",  time:"3 days ago",  type:"create"  },
+  { id:5, user:"John Trader",  avatar:"https://i.pravatar.cc/150?u=a042581f4e29026024d", action:"Updated company risk limits",                  time:"1 week ago",  type:"settings"},
+  { id:6, user:"Alex Rivera",  avatar:"https://i.pravatar.cc/150?u=d04e5b8e8f3e8e8e8e8e", action:"Joined as Trader",                           time:"Mar 5, 2024", type:"join"    },
 ];
 
-// ── Helper components ─────────────────────────────────────────────────────────
-function RoleBadge({ role }: { role: Role }) {
-  const cfg = ROLE_CONFIG[role];
-  const Icon = cfg.icon;
+/* ─── Sub-components ──────────────────────────────────────────────────────── */
+function RolePill({ role }: { role: Role }) {
+  const { icon: Icon, pill } = RC[role];
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cfg.bg} ${cfg.color}`}>
-      <Icon className="w-2.5 h-2.5" />
-      {role}
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide shadow-sm ${pill}`}>
+      <Icon className="w-2.5 h-2.5" />{role}
     </span>
   );
 }
 
-function StatusDot({ status }: { status: MemberStatus }) {
-  const map = { Active: "bg-success", Pending: "bg-amber-500", Suspended: "bg-destructive" };
+function StatusBadge({ status }: { status: MemberStatus }) {
+  const styles = {
+    Active:    "bg-emerald-500/15 text-emerald-400 border-emerald-500/20",
+    Pending:   "bg-amber-500/15 text-amber-400 border-amber-500/20",
+    Suspended: "bg-red-500/15 text-red-400 border-red-500/20",
+  };
+  const dots = { Active: "bg-emerald-400", Pending: "bg-amber-400", Suspended: "bg-red-400" };
   return (
-    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span className={`w-1.5 h-1.5 rounded-full ${map[status]}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${styles[status]}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dots[status]}`} />
       {status}
     </span>
   );
 }
 
-function PermCheck({ val }: { val: boolean }) {
+function PermCell({ val, role }: { val: boolean; role: Role }) {
+  const { dot } = RC[role];
   return val
-    ? <Check className="w-3.5 h-3.5 text-success mx-auto" />
-    : <X className="w-3 h-3 text-muted-foreground/30 mx-auto" />;
+    ? <div className="flex justify-center"><div className={`w-5 h-5 rounded-full ${dot} bg-opacity-20 flex items-center justify-center`}><Check className="w-3 h-3 text-white" /></div></div>
+    : <div className="flex justify-center"><X className="w-3 h-3 text-muted-foreground/20" /></div>;
 }
 
-// ── Invite panel ──────────────────────────────────────────────────────────────
-function InvitePanel({ onClose, onInvite }: { onClose: () => void; onInvite: (email: string, role: Role) => void }) {
+/* ─── Invite modal ────────────────────────────────────────────────────────── */
+function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (email: string, role: Role) => void }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("Trader");
+  const valid = email.includes("@") && email.includes(".");
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-base font-semibold flex items-center gap-2"><UserPlus className="w-4 h-4 text-primary" />Invite Team Member</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-        </div>
-        <div className="space-y-4">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input placeholder="colleague@company.com" value={email} onChange={e => setEmail(e.target.value)} className="pl-9 h-9 text-sm" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md" onClick={onClose}>
+      <div
+        className="w-full max-w-md bg-card border border-border/60 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="relative px-6 py-5 border-b border-border/50 bg-gradient-to-r from-primary/10 to-purple-600/5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+              <UserPlus className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold">Invite Team Member</h2>
+              <p className="text-[11px] text-muted-foreground">Send an email invitation to join your team</p>
             </div>
           </div>
+          <button onClick={onClose} className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Email */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Assign Role</label>
-            <div className="grid grid-cols-1 gap-2">
-              {(["Admin", "Manager", "Trader", "Viewer"] as Role[]).map(r => {
-                const cfg = ROLE_CONFIG[r];
+            <label className="text-xs font-semibold text-foreground mb-2 block">Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="colleague@company.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="pl-9 h-9 text-sm bg-background border-border focus:border-primary"
+              />
+            </div>
+          </div>
+
+          {/* Role picker */}
+          <div>
+            <label className="text-xs font-semibold text-foreground mb-2 block">Select Role</label>
+            <div className="space-y-2">
+              {(["Admin","Manager","Trader","Viewer"] as Role[]).map(r => {
+                const cfg = RC[r];
                 const Icon = cfg.icon;
+                const isSelected = role === r;
                 return (
                   <button
                     key={r}
                     onClick={() => setRole(r)}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${role === r ? `${cfg.bg} ${cfg.color} border-current` : "border-border hover:border-primary/40 text-muted-foreground"}`}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-150 ${
+                      isSelected
+                        ? `bg-gradient-to-r ${cfg.headerBg} border-white/10 shadow-md`
+                        : "border-border/50 hover:border-border bg-background/40 hover:bg-accent/30"
+                    }`}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold">{r}</p>
-                      <p className="text-[10px] opacity-70 leading-tight">{cfg.description}</p>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? cfg.pill : "bg-accent"}`}>
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
-                    {role === r && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-bold ${isSelected ? "text-foreground" : "text-muted-foreground"}`}>{r}</p>
+                      <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{cfg.description}</p>
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
+                      {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
+
           <Button
-            className="w-full bg-primary hover:bg-primary/90 h-9"
-            disabled={!email.includes("@")}
+            className="w-full h-10 bg-primary hover:bg-primary/90 font-semibold text-sm"
+            disabled={!valid}
             onClick={() => { onInvite(email, role); onClose(); }}
           >
-            <Mail className="w-3.5 h-3.5 mr-2" />Send Invitation
+            <Sparkles className="w-3.5 h-3.5 mr-2" />Send Invitation
           </Button>
         </div>
       </div>
@@ -159,10 +194,10 @@ function InvitePanel({ onClose, onInvite }: { onClose: () => void; onInvite: (em
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+/* ─── Main page ───────────────────────────────────────────────────────────── */
 export default function CompanyManagement() {
   const { toast } = useToast();
-  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
+  const [members, setMembers] = useState<Member[]>(INIT);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<Role | "All">("All");
   const [activeTab, setActiveTab] = useState<"members" | "roles" | "permissions" | "activity">("members");
@@ -170,426 +205,520 @@ export default function CompanyManagement() {
   const [editingRole, setEditingRole] = useState<{ id: string; current: Role } | null>(null);
 
   const filtered = members.filter(m => {
-    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole = filterRole === "All" || m.role === filterRole;
-    return matchSearch && matchRole;
+    const s = search.toLowerCase();
+    return (m.name.toLowerCase().includes(s) || m.email.toLowerCase().includes(s))
+      && (filterRole === "All" || m.role === filterRole);
   });
 
   const stats = {
-    total: members.length,
-    active: members.filter(m => m.status === "Active").length,
+    total:   members.length,
+    active:  members.filter(m => m.status === "Active").length,
     pending: members.filter(m => m.status === "Pending").length,
-    bots: members.reduce((s, m) => s + m.bots, 0),
+    bots:    members.reduce((s, m) => s + m.bots, 0),
   };
 
   const handleRoleChange = (id: string, newRole: Role) => {
-    const member = members.find(m => m.id === id);
-    if (!member || member.role === "Owner") return;
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, role: newRole } : m));
-    toast({ title: "Role updated", description: `${member.name}'s role changed to ${newRole}.` });
+    const m = members.find(x => x.id === id);
+    if (!m || m.role === "Owner") return;
+    setMembers(prev => prev.map(x => x.id === id ? { ...x, role: newRole } : x));
+    toast({ title: "Role updated", description: `${m.name}'s role changed to ${newRole}.` });
     setEditingRole(null);
   };
 
   const handleStatusToggle = (id: string) => {
-    const member = members.find(m => m.id === id);
-    if (!member || member.role === "Owner") return;
-    const newStatus: MemberStatus = member.status === "Active" ? "Suspended" : "Active";
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
-    toast({ title: `Account ${newStatus.toLowerCase()}`, description: `${member.name} is now ${newStatus.toLowerCase()}.` });
+    const m = members.find(x => x.id === id);
+    if (!m || m.role === "Owner") return;
+    const ns: MemberStatus = m.status === "Active" ? "Suspended" : "Active";
+    setMembers(prev => prev.map(x => x.id === id ? { ...x, status: ns } : x));
+    toast({ title: `Account ${ns.toLowerCase()}`, description: `${m.name} is now ${ns.toLowerCase()}.` });
   };
 
   const handleRemove = (id: string) => {
-    const member = members.find(m => m.id === id);
-    if (!member || member.role === "Owner") return;
-    setMembers(prev => prev.filter(m => m.id !== id));
-    toast({ title: "Member removed", description: `${member.name} has been removed from the team.` });
+    const m = members.find(x => x.id === id);
+    if (!m || m.role === "Owner") return;
+    setMembers(prev => prev.filter(x => x.id !== id));
+    toast({ title: "Member removed", description: `${m.name} has been removed from the team.` });
   };
 
   const handleInvite = (email: string, role: Role) => {
-    const newMember: Member = {
+    const newM: Member = {
       id: String(Date.now()),
       name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-      email,
-      avatar: `https://i.pravatar.cc/150?u=${email}`,
-      role,
-      status: "Pending",
-      joined: new Date().toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" }),
-      lastActive: "Never",
-      bots: 0,
-      pnl: "$0",
+      email, avatar: `https://i.pravatar.cc/150?u=${email}`,
+      role, status: "Pending",
+      joined: new Date().toLocaleDateString("en", { month:"short", day:"numeric", year:"numeric" }),
+      lastActive: "Never", bots: 0, pnl: "$0",
     };
-    setMembers(prev => [...prev, newMember]);
-    toast({ title: "Invitation sent", description: `${email} has been invited as ${role}.` });
+    setMembers(prev => [...prev, newM]);
+    toast({ title: "Invitation sent", description: `${email} invited as ${role}.` });
   };
+
+  const TABS = [
+    { key: "members" as const,     label: `Members`,       count: filtered.length },
+    { key: "roles" as const,       label: "Roles",         count: 5               },
+    { key: "permissions" as const, label: "Permissions",   count: null            },
+    { key: "activity" as const,    label: "Activity",      count: ACTIVITY.length },
+  ];
 
   return (
     <Layout title="Company" subtitle="Manage your organization, team members and access roles">
-      {showInvite && <InvitePanel onClose={() => setShowInvite(false)} onInvite={handleInvite} />}
+      {showInvite && <InviteModal onClose={() => setShowInvite(false)} onInvite={handleInvite} />}
 
-      <div className="flex flex-col gap-4 sm:gap-6">
+      <div className="flex flex-col gap-5">
 
-        {/* Company Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 bg-card border border-border rounded-xl">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-            <Building2 className="w-7 h-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold">TradeVision Capital LLC</h2>
-              <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">PRO PLAN</Badge>
+        {/* ── Hero banner ────────────────────────────────────────────────── */}
+        <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card">
+          {/* gradient backdrop */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-purple-700/10 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-5">
+            {/* Logo */}
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30">
+                <Building2 className="w-8 h-8 text-white" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-card flex items-center justify-center">
+                <Check className="w-2.5 h-2.5 text-white" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">Founded Jan 2024 · New York, USA · Proprietary Trading Firm</p>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h2 className="text-xl font-bold tracking-tight">TradeVision Capital LLC</h2>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold tracking-wide">
+                  <Sparkles className="w-2.5 h-2.5" />PRO PLAN
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />New York, USA</span>
+                <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />Founded Jan 2024</span>
+                <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />Proprietary Trading Firm</span>
+              </div>
+
+              {/* Member face-pile */}
+              <div className="flex items-center gap-2 mt-3">
+                <div className="flex -space-x-2">
+                  {INIT.slice(0,5).map(m => (
+                    <Avatar key={m.id} className="w-6 h-6 border-2 border-card">
+                      <AvatarImage src={m.avatar} />
+                      <AvatarFallback className="text-[8px]">{m.name[0]}</AvatarFallback>
+                    </Avatar>
+                  ))}
+                </div>
+                <span className="text-[11px] text-muted-foreground">{stats.total} members · {stats.active} active</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => setShowInvite(true)}
+              className="bg-primary hover:bg-primary/90 h-9 px-4 text-sm font-semibold shrink-0 shadow-lg shadow-primary/20"
+              data-testid="button-invite-member"
+            >
+              <UserPlus className="w-3.5 h-3.5 mr-2" />Invite Member
+            </Button>
           </div>
-          <Button
-            onClick={() => setShowInvite(true)}
-            className="bg-primary hover:bg-primary/90 text-xs h-8 shrink-0"
-            data-testid="button-invite-member"
-          >
-            <UserPlus className="w-3.5 h-3.5 mr-1.5" />Invite Member
-          </Button>
         </div>
 
-        {/* Stats */}
+        {/* ── Stats ──────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total Members", value: stats.total, icon: Users, color: "text-primary" },
-            { label: "Active Members", value: stats.active, icon: CheckCircle2, color: "text-success" },
-            { label: "Pending Invites", value: stats.pending, icon: Clock, color: "text-amber-400" },
-            { label: "Bots Running", value: stats.bots, icon: Bot, color: "text-cyan-400" },
+            { label:"Total Members",  value:stats.total,   icon:Users,        from:"from-primary/20",   to:"to-violet-600/5",  iconColor:"text-primary",  numColor:"text-primary"  },
+            { label:"Active Members", value:stats.active,  icon:CheckCircle2, from:"from-emerald-600/20",to:"to-green-600/5",  iconColor:"text-success",  numColor:"text-success"  },
+            { label:"Pending Invites",value:stats.pending, icon:Clock,        from:"from-amber-600/20", to:"to-yellow-600/5",  iconColor:"text-amber-400",numColor:"text-amber-400"},
+            { label:"Bots Running",   value:stats.bots,    icon:Bot,          from:"from-cyan-600/20",  to:"to-sky-600/5",     iconColor:"text-cyan-400", numColor:"text-cyan-400" },
           ].map(s => (
-            <Card key={s.label} className="bg-card border-border">
-              <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg bg-accent flex items-center justify-center ${s.color} shrink-0`}>
+            <div key={s.label} className={`relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br ${s.from} ${s.to} p-4`}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className={`text-2xl sm:text-3xl font-black ${s.numColor}`}>{s.value}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium mt-0.5 leading-tight">{s.label}</p>
+                </div>
+                <div className={`w-8 h-8 rounded-xl bg-card/60 flex items-center justify-center ${s.iconColor}`}>
                   <s.icon className="w-4 h-4" />
                 </div>
-                <div>
-                  <p className="text-lg sm:text-2xl font-bold leading-tight">{s.value}</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">{s.label}</p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-border overflow-x-auto no-scrollbar">
-          {(["members", "roles", "permissions", "activity"] as const).map(tab => (
+        {/* ── Tabs ───────────────────────────────────────────────────────── */}
+        <div className="flex gap-0.5 border-b border-border overflow-x-auto no-scrollbar">
+          {TABS.map(t => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-2.5 px-3 sm:px-4 text-xs sm:text-sm font-medium whitespace-nowrap capitalize transition-colors ${activeTab === tab ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
-              data-testid={`tab-${tab}`}
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`flex items-center gap-1.5 pb-3 px-4 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-150 ${
+                activeTab === t.key
+                  ? "text-primary border-b-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid={`tab-${t.key}`}
             >
-              {tab === "members" ? `Members (${filtered.length})` : tab === "permissions" ? "Permissions Matrix" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {t.label}
+              {t.count !== null && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${activeTab === t.key ? "bg-primary/20 text-primary" : "bg-accent text-muted-foreground"}`}>
+                  {t.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
-        {/* ── MEMBERS TAB ── */}
+        {/* ══ MEMBERS TAB ═══════════════════════════════════════════════════ */}
         {activeTab === "members" && (
           <div className="flex flex-col gap-3">
-            {/* Filters */}
+            {/* Filter bar */}
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input placeholder="Search members..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-8 text-xs" />
+                <Input placeholder="Search by name or email…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 text-xs bg-card border-border/60" />
               </div>
-              <select
-                value={filterRole}
-                onChange={e => setFilterRole(e.target.value as Role | "All")}
-                className="bg-accent border border-border rounded-md px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary h-8"
-              >
-                <option value="All">All Roles</option>
-                {(["Owner", "Admin", "Manager", "Trader", "Viewer"] as Role[]).map(r => <option key={r}>{r}</option>)}
-              </select>
+              <div className="flex gap-1 flex-wrap">
+                {(["All","Owner","Admin","Manager","Trader","Viewer"] as const).map(r => (
+                  <button
+                    key={r}
+                    onClick={() => setFilterRole(r)}
+                    className={`px-3 h-9 rounded-lg text-xs font-semibold border transition-all ${
+                      filterRole === r
+                        ? r === "All"
+                          ? "bg-primary text-white border-primary"
+                          : `${RC[r as Role]?.pill ?? ""} border-transparent`
+                        : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
+                    }`}
+                  >{r}</button>
+                ))}
+              </div>
             </div>
 
-            {/* Members list — cards on mobile, table on desktop */}
-            <div className="hidden sm:block">
-              <Card className="border-border bg-card overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-accent/30 text-muted-foreground text-xs">
-                        <th className="text-left px-4 py-3 font-medium">Member</th>
-                        <th className="text-left px-4 py-3 font-medium">Role</th>
-                        <th className="text-left px-4 py-3 font-medium">Status</th>
-                        <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Joined</th>
-                        <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Last Active</th>
-                        <th className="text-right px-4 py-3 font-medium">Bots</th>
-                        <th className="text-right px-4 py-3 font-medium">P&L</th>
-                        <th className="text-center px-4 py-3 font-medium">Actions</th>
+            {/* Desktop table */}
+            <div className="hidden sm:block rounded-xl border border-border/50 overflow-hidden bg-card">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-accent/40 border-b border-border/60 text-muted-foreground text-[11px] font-semibold uppercase tracking-wide">
+                    <th className="text-left px-5 py-3">Member</th>
+                    <th className="text-left px-4 py-3">Role</th>
+                    <th className="text-left px-4 py-3">Status</th>
+                    <th className="text-left px-4 py-3 hidden lg:table-cell">Joined</th>
+                    <th className="text-left px-4 py-3 hidden lg:table-cell">Last Active</th>
+                    <th className="text-right px-4 py-3">Bots</th>
+                    <th className="text-right px-4 py-3">P&L</th>
+                    <th className="text-center px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((m, i) => {
+                    const isOwner = m.role === "Owner";
+                    const pnlPos = m.pnl.startsWith("+");
+                    const pnlNeg = m.pnl.startsWith("-");
+                    const { ring, glow } = RC[m.role];
+                    return (
+                      <tr
+                        key={m.id}
+                        className={`border-b border-border/40 hover:bg-accent/20 transition-colors group ${i % 2 === 0 ? "" : "bg-accent/5"}`}
+                      >
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <Avatar className={`w-9 h-9 ring-2 ${ring} shadow-md ${glow}`}>
+                                <AvatarImage src={m.avatar} />
+                                <AvatarFallback className="text-[10px]">{m.name.split(" ").map(n=>n[0]).join("")}</AvatarFallback>
+                              </Avatar>
+                              {m.status === "Active" && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-card" />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold leading-tight">{m.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{m.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          {editingRole?.id === m.id && !isOwner ? (
+                            <div className="flex items-center gap-1.5">
+                              <select
+                                value={editingRole.current}
+                                onChange={e => setEditingRole({ id: m.id, current: e.target.value as Role })}
+                                className="bg-accent border border-border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                                autoFocus
+                              >
+                                {(["Admin","Manager","Trader","Viewer"] as Role[]).map(r => <option key={r}>{r}</option>)}
+                              </select>
+                              <button className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center" onClick={() => handleRoleChange(m.id, editingRole.current)}><Check className="w-3 h-3" /></button>
+                              <button className="w-6 h-6 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center" onClick={() => setEditingRole(null)}><X className="w-3 h-3" /></button>
+                            </div>
+                          ) : (
+                            <RolePill role={m.role} />
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5"><StatusBadge status={m.status} /></td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1"><CalendarDays className="w-3 h-3" />{m.joined}</span>
+                        </td>
+                        <td className="px-4 py-3.5 hidden lg:table-cell">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{m.lastActive}</span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <span className="inline-flex items-center justify-end gap-1 text-xs font-semibold">
+                            <Bot className="w-3 h-3 text-muted-foreground" />{m.bots}
+                          </span>
+                        </td>
+                        <td className={`px-4 py-3.5 text-right text-sm font-bold ${pnlPos ? "text-success" : pnlNeg ? "text-destructive" : "text-muted-foreground"}`}>{m.pnl}</td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {!isOwner ? (
+                              <>
+                                <button
+                                  className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center transition-colors"
+                                  title="Change role"
+                                  onClick={() => setEditingRole({ id: m.id, current: m.role })}
+                                ><Edit2 className="w-3 h-3" /></button>
+                                <button
+                                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${m.status==="Active" ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"}`}
+                                  title={m.status==="Active" ? "Suspend" : "Activate"}
+                                  onClick={() => handleStatusToggle(m.id)}
+                                ><AlertTriangle className="w-3 h-3" /></button>
+                                <button
+                                  className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors"
+                                  title="Remove member"
+                                  onClick={() => handleRemove(m.id)}
+                                ><Trash2 className="w-3 h-3" /></button>
+                              </>
+                            ) : (
+                              <Lock className="w-3.5 h-3.5 text-muted-foreground/20" />
+                            )}
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map(member => {
-                        const isOwner = member.role === "Owner";
-                        const pnlPositive = member.pnl.startsWith("+");
-                        const pnlNegative = member.pnl.startsWith("-");
-                        return (
-                          <tr key={member.id} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <div className="relative">
-                                  <Avatar className="w-8 h-8">
-                                    <AvatarImage src={member.avatar} />
-                                    <AvatarFallback className="text-[10px]">{member.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                                  </Avatar>
-                                  {member.status === "Active" && <span className="absolute bottom-0 right-0 w-2 h-2 bg-success rounded-full border border-card" />}
-                                </div>
-                                <div>
-                                  <p className="text-xs font-semibold">{member.name}</p>
-                                  <p className="text-[10px] text-muted-foreground">{member.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              {editingRole?.id === member.id && !isOwner ? (
-                                <div className="flex items-center gap-1">
-                                  <select
-                                    value={editingRole.current}
-                                    onChange={e => setEditingRole({ id: member.id, current: e.target.value as Role })}
-                                    className="bg-accent border border-border rounded px-1.5 py-1 text-[10px] focus:outline-none"
-                                    autoFocus
-                                  >
-                                    {(["Admin", "Manager", "Trader", "Viewer"] as Role[]).map(r => <option key={r}>{r}</option>)}
-                                  </select>
-                                  <button className="text-success hover:opacity-80" onClick={() => handleRoleChange(member.id, editingRole.current)}><Check className="w-3 h-3" /></button>
-                                  <button className="text-destructive hover:opacity-80" onClick={() => setEditingRole(null)}><X className="w-3 h-3" /></button>
-                                </div>
-                              ) : (
-                                <RoleBadge role={member.role} />
-                              )}
-                            </td>
-                            <td className="px-4 py-3"><StatusDot status={member.status} /></td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">{member.joined}</td>
-                            <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">{member.lastActive}</td>
-                            <td className="px-4 py-3 text-xs text-right font-medium">{member.bots}</td>
-                            <td className={`px-4 py-3 text-xs text-right font-bold ${pnlPositive ? "text-success" : pnlNegative ? "text-destructive" : "text-muted-foreground"}`}>{member.pnl}</td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center justify-center gap-1">
-                                {!isOwner && (
-                                  <>
-                                    <button
-                                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                                      title="Change role"
-                                      onClick={() => setEditingRole({ id: member.id, current: member.role })}
-                                    ><Edit2 className="w-3 h-3" /></button>
-                                    <button
-                                      className={`p-1 transition-colors ${member.status === "Active" ? "text-muted-foreground hover:text-amber-400" : "text-muted-foreground hover:text-success"}`}
-                                      title={member.status === "Active" ? "Suspend" : "Activate"}
-                                      onClick={() => handleStatusToggle(member.id)}
-                                    ><AlertTriangle className="w-3 h-3" /></button>
-                                    <button
-                                      className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                                      title="Remove member"
-                                      onClick={() => handleRemove(member.id)}
-                                    ><Trash2 className="w-3 h-3" /></button>
-                                  </>
-                                )}
-                                {isOwner && <Lock className="w-3 h-3 text-muted-foreground/30" />}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {filtered.length === 0 && (
+                <div className="py-16 text-center">
+                  <Users className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No members match your search</p>
                 </div>
-              </Card>
+              )}
             </div>
 
             {/* Mobile cards */}
-            <div className="sm:hidden flex flex-col gap-2">
-              {filtered.map(member => {
-                const isOwner = member.role === "Owner";
-                const pnlPositive = member.pnl.startsWith("+");
+            <div className="sm:hidden space-y-2">
+              {filtered.map(m => {
+                const { ring, glow } = RC[m.role];
+                const pnlPos = m.pnl.startsWith("+");
                 return (
-                  <Card key={member.id} className="border-border bg-card">
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-3">
-                        <div className="relative">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={member.avatar} />
-                            <AvatarFallback className="text-[10px]">{member.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                          </Avatar>
-                          {member.status === "Active" && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success rounded-full border-2 border-card" />}
+                  <div key={m.id} className="bg-card border border-border/50 rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className={`w-11 h-11 ring-2 ${ring} shadow-md ${glow} shrink-0`}>
+                        <AvatarImage src={m.avatar} />
+                        <AvatarFallback className="text-xs">{m.name.split(" ").map(n=>n[0]).join("")}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p className="text-sm font-bold truncate">{m.name}</p>
+                          <StatusBadge status={m.status} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-semibold truncate">{member.name}</p>
-                            <StatusDot status={member.status} />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground mb-2">{member.email}</p>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <RoleBadge role={member.role} />
-                            <span className="text-[10px] text-muted-foreground">{member.bots} bots</span>
-                            <span className={`text-[10px] font-bold ${pnlPositive ? "text-success" : "text-destructive"}`}>{member.pnl}</span>
-                          </div>
+                        <p className="text-[10px] text-muted-foreground truncate mb-2">{m.email}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <RolePill role={m.role} />
+                          <span className={`text-[11px] font-bold ${pnlPos ? "text-success" : "text-destructive"}`}>{m.pnl}</span>
+                          <span className="text-[10px] text-muted-foreground">{m.bots} bots</span>
                         </div>
-                        {!isOwner && (
-                          <div className="flex flex-col gap-1 shrink-0">
-                            <button className="p-1.5 text-muted-foreground hover:text-primary" onClick={() => setEditingRole({ id: member.id, current: member.role })}><Edit2 className="w-3.5 h-3.5" /></button>
-                            <button className="p-1.5 text-muted-foreground hover:text-destructive" onClick={() => handleRemove(member.id)}><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        )}
                       </div>
-                      {editingRole?.id === member.id && !isOwner && (
-                        <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Change role:</span>
-                          <select
-                            value={editingRole.current}
-                            onChange={e => setEditingRole({ id: member.id, current: e.target.value as Role })}
-                            className="flex-1 bg-accent border border-border rounded px-2 py-1 text-xs"
-                          >
-                            {(["Admin", "Manager", "Trader", "Viewer"] as Role[]).map(r => <option key={r}>{r}</option>)}
-                          </select>
-                          <button className="text-xs bg-primary text-white px-2 py-1 rounded" onClick={() => handleRoleChange(member.id, editingRole.current)}>Save</button>
-                          <button className="text-xs text-muted-foreground" onClick={() => setEditingRole(null)}>Cancel</button>
-                        </div>
+                      {m.role !== "Owner" && (
+                        <button
+                          className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0"
+                          onClick={() => setEditingRole({ id: m.id, current: m.role })}
+                        ><Edit2 className="w-3.5 h-3.5" /></button>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                    {editingRole?.id === m.id && m.role !== "Owner" && (
+                      <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Role:</span>
+                        <select
+                          value={editingRole.current}
+                          onChange={e => setEditingRole({ id: m.id, current: e.target.value as Role })}
+                          className="flex-1 bg-accent border border-border rounded-lg px-2 py-1.5 text-xs"
+                        >
+                          {(["Admin","Manager","Trader","Viewer"] as Role[]).map(r => <option key={r}>{r}</option>)}
+                        </select>
+                        <button className="px-2 py-1.5 rounded-lg bg-primary text-white text-xs font-bold" onClick={() => handleRoleChange(m.id, editingRole.current)}>Save</button>
+                        <button className="text-xs text-muted-foreground" onClick={() => setEditingRole(null)}>Cancel</button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
           </div>
         )}
 
-        {/* ── ROLES TAB ── */}
+        {/* ══ ROLES TAB ═════════════════════════════════════════════════════ */}
         {activeTab === "roles" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {(["Owner", "Admin", "Manager", "Trader", "Viewer"] as Role[]).map(role => {
-              const cfg = ROLE_CONFIG[role];
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {(["Owner","Admin","Manager","Trader","Viewer"] as Role[]).map(role => {
+              const cfg = RC[role];
               const Icon = cfg.icon;
-              const count = members.filter(m => m.role === role).length;
               const roleMembers = members.filter(m => m.role === role);
+              const count = roleMembers.length;
               return (
-                <Card key={role} className={`border ${cfg.bg}`}>
-                  <CardHeader className="pb-2 px-4 pt-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${cfg.bg}`}>
-                          <Icon className={`w-4 h-4 ${cfg.color}`} />
+                <div key={role} className={`relative overflow-hidden rounded-xl border border-border/50 bg-card`}>
+                  {/* Gradient top strip */}
+                  <div className={`h-1 bg-gradient-to-r ${cfg.pill}`} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${cfg.headerBg} pointer-events-none`} />
+
+                  <div className="relative p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${cfg.pill}`}>
+                          <Icon className="w-5 h-5" />
                         </div>
                         <div>
-                          <CardTitle className={`text-sm font-bold ${cfg.color}`}>{role}</CardTitle>
+                          <h3 className="text-sm font-bold">{role}</h3>
                           <p className="text-[10px] text-muted-foreground">{count} member{count !== 1 ? "s" : ""}</p>
                         </div>
                       </div>
-                      <span className={`text-xl font-black ${cfg.color}`}>{count}</span>
+                      <span className={`text-3xl font-black ${cfg.dot.replace("bg-","text-")}`}>{count}</span>
                     </div>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-3">
-                    <p className="text-xs text-muted-foreground leading-relaxed">{cfg.description}</p>
-                    {roleMembers.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {roleMembers.slice(0, 4).map(m => (
-                          <div key={m.id} className="flex items-center gap-1.5 bg-background/60 rounded-full px-2 py-1">
-                            <Avatar className="w-4 h-4">
+
+                    <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{cfg.description}</p>
+
+                    {roleMembers.length > 0 ? (
+                      <div className="space-y-2">
+                        {roleMembers.slice(0,4).map(m => (
+                          <div key={m.id} className="flex items-center gap-2.5 p-2 rounded-lg bg-background/40 border border-border/30">
+                            <Avatar className="w-6 h-6 shrink-0">
                               <AvatarImage src={m.avatar} />
                               <AvatarFallback className="text-[8px]">{m.name[0]}</AvatarFallback>
                             </Avatar>
-                            <span className="text-[10px] text-foreground">{m.name.split(" ")[0]}</span>
+                            <span className="text-xs font-medium flex-1 truncate">{m.name}</span>
+                            <StatusBadge status={m.status} />
                           </div>
                         ))}
                         {roleMembers.length > 4 && (
-                          <span className="text-[10px] text-muted-foreground px-2 py-1">+{roleMembers.length - 4} more</span>
+                          <p className="text-[10px] text-muted-foreground text-center pt-1">+{roleMembers.length - 4} more</p>
                         )}
                       </div>
+                    ) : (
+                      <div className="text-center py-4 text-[11px] text-muted-foreground">No members assigned</div>
                     )}
-                    {roleMembers.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground italic">No members with this role</p>
-                    )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
         )}
 
-        {/* ── PERMISSIONS TAB ── */}
+        {/* ══ PERMISSIONS TAB ═══════════════════════════════════════════════ */}
         {activeTab === "permissions" && (
-          <Card className="border-border bg-card overflow-hidden">
-            <CardHeader className="px-4 py-3 border-b border-border/50">
-              <CardTitle className="text-sm">Permissions Matrix</CardTitle>
-              <p className="text-xs text-muted-foreground">What each role can and cannot do</p>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-accent/20">
-                      <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground w-48">Permission</th>
-                      {(["Owner", "Admin", "Manager", "Trader", "Viewer"] as Role[]).map(role => {
-                        const cfg = ROLE_CONFIG[role];
-                        const Icon = cfg.icon;
-                        return (
-                          <th key={role} className="px-3 py-3 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
-                              <span className={`text-[10px] font-semibold ${cfg.color}`}>{role}</span>
-                            </div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PERMISSIONS.map((perm, i) => {
-                      const Icon = perm.icon;
+          <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-border/50 bg-accent/20">
+              <h3 className="text-sm font-bold">Permissions Matrix</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">A comprehensive overview of what each role can access and perform</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border/60">
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground w-52">Permission</th>
+                    {(["Owner","Admin","Manager","Trader","Viewer"] as Role[]).map(role => {
+                      const { icon: Icon, pill, dot } = RC[role];
                       return (
-                        <tr key={i} className="border-b border-border/40 hover:bg-accent/10 transition-colors">
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <span className="text-xs">{perm.label}</span>
+                        <th key={role} className="px-3 py-3 text-center">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className={`w-7 h-7 rounded-lg ${pill} flex items-center justify-center shadow-sm`}>
+                              <Icon className="w-3.5 h-3.5" />
                             </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-center"><PermCheck val={perm.owner} /></td>
-                          <td className="px-3 py-2.5 text-center"><PermCheck val={perm.admin} /></td>
-                          <td className="px-3 py-2.5 text-center"><PermCheck val={perm.manager} /></td>
-                          <td className="px-3 py-2.5 text-center"><PermCheck val={perm.trader} /></td>
-                          <td className="px-3 py-2.5 text-center"><PermCheck val={perm.viewer} /></td>
-                        </tr>
+                            <span className={`text-[10px] font-bold ${dot.replace("bg-","text-")}`}>{role}</span>
+                          </div>
+                        </th>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PERMS.map((p, i) => {
+                    const Icon = p.icon;
+                    return (
+                      <tr key={i} className={`border-b border-border/30 hover:bg-accent/10 transition-colors ${i % 2 === 0 ? "" : "bg-accent/5"}`}>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                            <span className="text-xs font-medium">{p.label}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3"><PermCell val={p.owner}   role="Owner"   /></td>
+                        <td className="px-3 py-3"><PermCell val={p.admin}   role="Admin"   /></td>
+                        <td className="px-3 py-3"><PermCell val={p.manager} role="Manager" /></td>
+                        <td className="px-3 py-3"><PermCell val={p.trader}  role="Trader"  /></td>
+                        <td className="px-3 py-3"><PermCell val={p.viewer}  role="Viewer"  /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
-        {/* ── ACTIVITY TAB ── */}
+        {/* ══ ACTIVITY TAB ══════════════════════════════════════════════════ */}
         {activeTab === "activity" && (
-          <Card className="border-border bg-card">
-            <CardHeader className="px-4 py-3 border-b border-border/50">
-              <CardTitle className="text-sm flex items-center gap-2"><Activity className="w-4 h-4" /> Activity Log</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {ACTIVITY_LOG.map((log, i) => {
-                const iconMap: Record<string, React.ElementType> = { role: Edit2, invite: UserPlus, suspend: AlertTriangle, create: Plus, settings: Settings, join: Users };
-                const colorMap: Record<string, string> = { role: "text-blue-400 bg-blue-500/10", invite: "text-primary bg-primary/10", suspend: "text-amber-400 bg-amber-500/10", create: "text-success bg-success/10", settings: "text-purple-400 bg-purple-500/10", join: "text-cyan-400 bg-cyan-500/10" };
-                const Icon = iconMap[log.type] || Activity;
-                return (
-                  <div key={log.id} className={`flex items-start gap-3 px-4 py-3 ${i < ACTIVITY_LOG.length - 1 ? "border-b border-border/40" : ""} hover:bg-accent/10 transition-colors`}>
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${colorMap[log.type]}`}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground">{log.action}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-muted-foreground">by <span className="text-foreground/70">{log.user}</span></span>
-                        <span className="text-[10px] text-muted-foreground/50">·</span>
-                        <span className="text-[10px] text-muted-foreground">{log.time}</span>
+          <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
+            <div className="px-5 py-4 border-b border-border/50 bg-accent/20 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-bold">Audit Log</h3>
+              <span className="ml-auto text-[10px] text-muted-foreground">Last 30 days</span>
+            </div>
+
+            <div className="p-5">
+              <div className="relative">
+                {/* Vertical timeline line */}
+                <div className="absolute left-5 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
+
+                <div className="space-y-5">
+                  {ACTIVITY.map(log => {
+                    const typeStyles: Record<string, { bg: string; color: string; icon: React.ElementType }> = {
+                      role:     { bg:"bg-blue-500/15",    color:"text-blue-400",    icon: Edit2       },
+                      invite:   { bg:"bg-primary/15",     color:"text-primary",     icon: UserPlus    },
+                      suspend:  { bg:"bg-amber-500/15",   color:"text-amber-400",   icon: AlertTriangle},
+                      create:   { bg:"bg-success/15",     color:"text-success",     icon: CheckCircle2},
+                      settings: { bg:"bg-purple-500/15",  color:"text-purple-400",  icon: Settings    },
+                      join:     { bg:"bg-cyan-500/15",    color:"text-cyan-400",    icon: Users       },
+                    };
+                    const ts = typeStyles[log.type] ?? typeStyles.join;
+                    const TIcon = ts.icon;
+                    return (
+                      <div key={log.id} className="relative flex items-start gap-4 pl-10">
+                        {/* Dot on timeline */}
+                        <div className={`absolute left-3.5 top-2 w-3 h-3 rounded-full border-2 border-card ${ts.bg.replace("/15","").replace("bg-","bg-")} shadow-sm`} />
+
+                        {/* Icon */}
+                        <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center ${ts.bg} ${ts.color}`}>
+                          <TIcon className="w-3.5 h-3.5" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium leading-snug">{log.action}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Avatar className="w-4 h-4">
+                              <AvatarImage src={log.avatar} />
+                              <AvatarFallback className="text-[7px]">{log.user[0]}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-[11px] text-muted-foreground">{log.user}</span>
+                            <ChevronRight className="w-3 h-3 text-muted-foreground/40" />
+                            <span className="text-[11px] text-muted-foreground/60">{log.time}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
       </div>
