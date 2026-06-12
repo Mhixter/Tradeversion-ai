@@ -16,6 +16,8 @@ import Notifications from "@/pages/Notifications";
 import Settings from "@/pages/Settings";
 import Account from "@/pages/Account";
 import CompanyManagement from "@/pages/CompanyManagement";
+import Landing from "@/pages/Landing";
+import Signup from "@/pages/Signup";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/account" component={Account} />
       <Route path="/company" component={CompanyManagement} />
+      <Route path="/landing" component={Landing} />
+      <Route path="/signup" component={Signup} />
       <Route component={NotFound} />
     </Switch>
   );
