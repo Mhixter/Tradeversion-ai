@@ -19,6 +19,10 @@ tags:
   - name: notifications
   - name: brokers
   - name: trades
+  - name: auth
+  - name: kyc
+  - name: billing
+  - name: company
 
 paths:
   /healthz:
@@ -1064,7 +1068,174 @@ paths:
               schema:
                 $ref: "#/components/schemas/TradeAnalytics"
 
+  # ─── AUTH ────────────────────────────────────────────────────────────────────
+  /auth/user:
+    get:
+      tags: [auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+  /callback:
+    get:
+      tags: [auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      responses:
+        '302':
+          description: Redirect to the returnTo path on success.
+  /logout:
+    get:
+      tags: [auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '302':
+          description: Redirect to the OIDC provider logout URL.
+
+  # ─── KYC ─────────────────────────────────────────────────────────────────────
+  /kyc/status:
+    get:
+      tags: [kyc]
+      operationId: getKycStatus
+      summary: Get current user KYC status
+      responses:
+        '200':
+          description: KYC status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycStatus'
+  /kyc/submit:
+    post:
+      tags: [kyc]
+      operationId: submitKyc
+      summary: Submit KYC verification data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KycSubmission'
+      responses:
+        '200':
+          description: KYC submission accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycStatus'
+
+  # ─── BILLING ─────────────────────────────────────────────────────────────────
+  /billing/subscription:
+    get:
+      tags: [billing]
+      operationId: getSubscription
+      summary: Get current subscription
+      responses:
+        '200':
+          description: Current subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionInfo'
+  /billing/plans:
+    get:
+      tags: [billing]
+      operationId: getBillingPlans
+      summary: Get available billing plans
+      responses:
+        '200':
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BillingPlan'
+
+  # ─── COMPANY ─────────────────────────────────────────────────────────────────
+  /company/overview:
+    get:
+      tags: [company]
+      operationId: getCompanyOverview
+      summary: Get company overview with department stats
+      responses:
+        '200':
+          description: Company overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyOverview'
+  /company/departments:
+    get:
+      tags: [company]
+      operationId: getDepartments
+      summary: List company departments
+      responses:
+        '200':
+          description: Departments list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Department'
+  /company/members:
+    get:
+      tags: [company]
+      operationId: getCompanyMembers
+      summary: List company members
+      responses:
+        '200':
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanyMember'
+
 components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      description: Opaque session token — Bearer <sid>.
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      description: Browser session cookie.
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -2066,3 +2237,199 @@ components:
           type: number
         time:
           type: string
+
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+    KycStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [not_started, pending, under_review, approved, rejected, requires_resubmission]
+        userId:
+          type: string
+        submittedAt:
+          type: [string, 'null']
+        reviewedAt:
+          type: [string, 'null']
+        rejectionReason:
+          type: [string, 'null']
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        nationality:
+          type: [string, 'null']
+        countryOfResidence:
+          type: [string, 'null']
+    KycSubmission:
+      type: object
+      required: [firstName, lastName, dateOfBirth, nationality, countryOfResidence, addressLine1, city, country, docType, docNumber]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        middleName:
+          type: [string, 'null']
+        dateOfBirth:
+          type: string
+        nationality:
+          type: string
+        countryOfResidence:
+          type: string
+        taxId:
+          type: [string, 'null']
+        addressLine1:
+          type: string
+        addressLine2:
+          type: [string, 'null']
+        city:
+          type: string
+        state:
+          type: [string, 'null']
+        postalCode:
+          type: [string, 'null']
+        country:
+          type: string
+        docType:
+          type: string
+          enum: [passport, national_id, drivers_license, residence_permit]
+        docNumber:
+          type: string
+        docIssuingCountry:
+          type: [string, 'null']
+        docExpiryDate:
+          type: [string, 'null']
+        isPep:
+          type: [string, 'null']
+        isUsCitizen:
+          type: [string, 'null']
+        sourceOfFunds:
+          type: [string, 'null']
+        employmentStatus:
+          type: [string, 'null']
+        annualIncome:
+          type: [string, 'null']
+        addressDocType:
+          type: [string, 'null']
+    SubscriptionInfo:
+      type: object
+      required: [plan, status, billingCycle]
+      properties:
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        status:
+          type: string
+          enum: [active, trialing, past_due, canceled, paused]
+        billingCycle:
+          type: string
+          enum: [monthly, annual]
+        amountCents:
+          type: integer
+        trialEndsAt:
+          type: [string, 'null']
+        currentPeriodEnd:
+          type: [string, 'null']
+        cancelAtPeriodEnd:
+          type: boolean
+        stripeCustomerId:
+          type: [string, 'null']
+    BillingPlan:
+      type: object
+      required: [id, name, features]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: [integer, 'null']
+        currency:
+          type: string
+        interval:
+          type: string
+        popular:
+          type: boolean
+        features:
+          type: array
+          items:
+            type: string
+    CompanyOverview:
+      type: object
+      required: [exists]
+      properties:
+        exists:
+          type: boolean
+        company:
+          type: object
+        memberCount:
+          type: integer
+        activeCount:
+          type: integer
+        departmentCount:
+          type: integer
+    Department:
+      type: object
+      required: [id, name, companyId]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        companyId:
+          type: string
+        headUserId:
+          type: [string, 'null']
+        budget:
+          type: [integer, 'null']
+        createdAt:
+          type: string
+    CompanyMember:
+      type: object
+      required: [id, userId, role, status]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, manager, trader, viewer]
+        status:
+          type: string
+          enum: [active, pending, suspended]
+        departmentId:
+          type: [string, 'null']
+        email:
+          type: [string, 'null']
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+        joinedAt:
+          type: [string, 'null']

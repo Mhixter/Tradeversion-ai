@@ -51,7 +51,7 @@ const DEFAULT_NODES: CanvasNode[] = [
   { id: "8", label: "Execute Order", type: "execute", x: 890, y: 120 },
 ];
 
-const CONNECTIONS = [
+const CONNECTIONS: [string, string][] = [
   ["1", "2"], ["1", "3"], ["2", "4"], ["3", "4"],
   ["4", "5"], ["4", "6"], ["5", "7"], ["7", "8"], ["6", "8"],
 ];

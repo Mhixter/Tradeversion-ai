@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, botsTable } from "@workspace/db";
-import { eq, desc, count, sum, avg } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
+import { generateSignal, STRATEGY_TEMPLATES } from "../lib/strategyEngine";
 
 const router = Router();
 
@@ -25,12 +26,22 @@ router.get("/bots", async (req, res) => {
 
 router.post("/bots", async (req, res) => {
   try {
-    const { name, strategy, account, market, timeframe } = req.body;
+    const { name, strategy, account, market, timeframe, strategyTemplateId, isAI } = req.body;
+    const template = STRATEGY_TEMPLATES.find(t => t.id === strategyTemplateId);
     const [inserted] = await db.insert(botsTable).values({
-      name, strategy, account, market, timeframe,
-      strategyType: strategy, accountNumber: "", status: "STOPPED",
-      pnlToday: "0", pnlTodayPercent: "0", pnlAllTime: "0", pnlAllTimePercent: "0",
-      winRate: "0", isAI: false, sortOrder: 99,
+      name,
+      strategy: strategy || template?.name || "Custom",
+      strategyType: template?.type || strategy || "Custom",
+      account: account || "Live MT5",
+      accountNumber: req.body.accountNumber || "",
+      market: market || template?.markets[0] || "Forex",
+      timeframe: timeframe || template?.timeframes[0] || "H1",
+      status: "STOPPED",
+      pnlToday: "0", pnlTodayPercent: "0",
+      pnlAllTime: "0", pnlAllTimePercent: "0",
+      winRate: String(template?.avgWinRate || 0),
+      isAI: isAI ?? (template?.type === "AI/ML" || false),
+      sortOrder: 99,
     }).returning();
     res.status(201).json(mapBot(inserted));
   } catch (e) {
@@ -48,11 +59,13 @@ router.get("/bots/stats", async (req, res) => {
     const error = bots.filter(b => b.status === "ERROR").length;
     const totalProfit = bots.reduce((s, b) => s + parseFloat(b.pnlAllTime), 0);
     const winRates = bots.filter(b => parseFloat(b.winRate) > 0).map(b => parseFloat(b.winRate));
-    const avgWinRate = winRates.length ? winRates.reduce((a, b) => a + b, 0) / winRates.length : 78.42;
+    const avgWinRate = winRates.length ? winRates.reduce((a, b) => a + b, 0) / winRates.length : 68.4;
     res.json({
-      totalBots: bots.length || 20, running: running || 12, stopped: stopped || 5,
-      paused: paused || 2, error: error || 1, totalProfit: totalProfit || 24560.75,
-      avgWinRate: avgWinRate, newBotsThisWeek: 2, runningChange: 2, stoppedChange: 0,
+      totalBots: bots.length,
+      running, stopped, paused, error,
+      totalProfit: Math.round(totalProfit * 100) / 100,
+      avgWinRate: Math.round(avgWinRate * 10) / 10,
+      newBotsThisWeek: 2, runningChange: 2, stoppedChange: 0,
     });
   } catch (e) {
     req.log.error(e);
@@ -63,50 +76,20 @@ router.get("/bots/stats", async (req, res) => {
 router.get("/bots/top-performing", async (req, res) => {
   try {
     const bots = await db.select().from(botsTable).orderBy(desc(botsTable.pnlAllTime)).limit(5);
-    res.json(bots.length ? bots.map(b => ({
+    res.json(bots.map(b => ({
       id: b.id, name: b.name, totalProfit: parseFloat(b.pnlAllTime),
       profitPercent: parseFloat(b.pnlAllTimePercent), winRate: parseFloat(b.winRate),
-    })) : [
-      { id: 1, name: "Gold Hunter AI", totalProfit: 6840.20, profitPercent: 22.13, winRate: 76.8 },
-      { id: 2, name: "AI Scalper Pro", totalProfit: 4250.75, profitPercent: 18.45, winRate: 82.4 },
-      { id: 3, name: "Crypto Wave AI", totalProfit: 3120.00, profitPercent: 15.22, winRate: 79.3 },
-      { id: 4, name: "AI Momentum", totalProfit: 2150.80, profitPercent: 17.40, winRate: 81.1 },
-      { id: 5, name: "Mean Reversion Bot", totalProfit: 980.40, profitPercent: 8.91, winRate: 71.2 },
-    ]);
+    })));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/bots/performance-chart", async (req, res) => {
-  const points = [];
-  const start = new Date("2024-05-01");
-  let equity = 0;
-  for (let i = 0; i < 32; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    equity += (Math.random() - 0.3) * 800;
-    if (i === 31) equity = 24560.75;
-    points.push({ date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), equity: Math.round(equity * 100) / 100 });
-  }
-  res.json(points);
-});
-
-router.get("/bots/logs", async (req, res) => {
-  res.json([
-    { id: 1, botName: "AI Scalper Pro", message: "Opened Buy EURUSD @ 1.11636", time: "10:30:45" },
-    { id: 2, botName: "Gold Hunter AI", message: "Closed Buy XAUUSD @ 2345.40", time: "10:30:21" },
-    { id: 3, botName: "News Straddle Bot", message: "High impact news detected", time: "10:29:58" },
-    { id: 4, botName: "AI Momentum", message: "Trailing Stop adjusted", time: "10:29:31" },
-    { id: 5, botName: "Grid Master", message: "Grid level created @ 0.67123", time: "10:29:15" },
-  ]);
-});
-
 router.get("/bots/:id", async (req, res) => {
   try {
     const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
-    if (!bot) return res.status(404).json({ error: "Bot not found" });
+    if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
     res.json(mapBot(bot));
   } catch (e) {
     req.log.error(e);
@@ -116,12 +99,14 @@ router.get("/bots/:id", async (req, res) => {
 
 router.patch("/bots/:id", async (req, res) => {
   try {
-    const { name, status } = req.body;
+    const { name, strategy, account, market, timeframe } = req.body;
     const update: Partial<typeof botsTable.$inferInsert> = {};
     if (name) update.name = name;
-    if (status) update.status = status;
+    if (strategy) update.strategy = strategy;
+    if (account) update.account = account;
+    if (market) update.market = market;
+    if (timeframe) update.timeframe = timeframe;
     const [updated] = await db.update(botsTable).set(update).where(eq(botsTable.id, parseInt(req.params.id))).returning();
-    if (!updated) return res.status(404).json({ error: "Bot not found" });
     res.json(mapBot(updated));
   } catch (e) {
     req.log.error(e);
@@ -139,11 +124,17 @@ router.delete("/bots/:id", async (req, res) => {
   }
 });
 
+// ─── Bot control ─────────────────────────────────────────────────────────────
+
 router.post("/bots/:id/start", async (req, res) => {
   try {
-    const [updated] = await db.update(botsTable).set({ status: "RUNNING" }).where(eq(botsTable.id, parseInt(req.params.id))).returning();
-    if (!updated) return res.status(404).json({ error: "Bot not found" });
-    res.json(mapBot(updated));
+    const [bot] = await db.update(botsTable)
+      .set({ status: "RUNNING" })
+      .where(eq(botsTable.id, parseInt(req.params.id)))
+      .returning();
+    if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
+    req.log.info({ botId: bot.id, name: bot.name }, "Bot started");
+    res.json({ success: true, status: "RUNNING", bot: mapBot(bot) });
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });
@@ -152,9 +143,12 @@ router.post("/bots/:id/start", async (req, res) => {
 
 router.post("/bots/:id/stop", async (req, res) => {
   try {
-    const [updated] = await db.update(botsTable).set({ status: "STOPPED" }).where(eq(botsTable.id, parseInt(req.params.id))).returning();
-    if (!updated) return res.status(404).json({ error: "Bot not found" });
-    res.json(mapBot(updated));
+    const [bot] = await db.update(botsTable)
+      .set({ status: "STOPPED" })
+      .where(eq(botsTable.id, parseInt(req.params.id)))
+      .returning();
+    if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
+    res.json({ success: true, status: "STOPPED", bot: mapBot(bot) });
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });
@@ -163,9 +157,73 @@ router.post("/bots/:id/stop", async (req, res) => {
 
 router.post("/bots/:id/pause", async (req, res) => {
   try {
-    const [updated] = await db.update(botsTable).set({ status: "PAUSED" }).where(eq(botsTable.id, parseInt(req.params.id))).returning();
-    if (!updated) return res.status(404).json({ error: "Bot not found" });
-    res.json(mapBot(updated));
+    const [bot] = await db.update(botsTable)
+      .set({ status: "PAUSED" })
+      .where(eq(botsTable.id, parseInt(req.params.id)))
+      .returning();
+    if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
+    res.json({ success: true, status: "PAUSED", bot: mapBot(bot) });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/bots/:id/signal — Generate real-time strategy signal
+router.get("/bots/:id/signal", async (req, res) => {
+  try {
+    const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
+    if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
+    if (bot.status !== "RUNNING") {
+      res.json({ action: "HOLD", reason: "Bot is not running", confidence: 0, stopLoss: 0, takeProfit: 0 });
+      return;
+    }
+    // Use strategy template lookup
+    const templateId = STRATEGY_TEMPLATES.find(t => t.name === bot.strategy)?.id || "sma_crossover";
+    const atrValue = parseFloat(bot.market === "Crypto" ? "250" : bot.market === "Gold" ? "8" : "0.0012");
+    const signal = generateSignal(templateId, bot.market, atrValue);
+    res.json({ ...signal, botId: bot.id, botName: bot.name, market: bot.market });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/bots/:id/execute — Execute a trade based on strategy signal
+router.post("/bots/:id/execute", async (req, res) => {
+  try {
+    const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
+    if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
+    if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const { action, size, symbol } = req.body;
+    if (!["BUY","SELL"].includes(action)) {
+      res.status(400).json({ error: "Invalid action" });
+      return;
+    }
+
+    // Simulate execution with realistic latency
+    const executionPrice = parseFloat(req.body.price || "0") || (
+      symbol?.includes("XAU") ? 2340 + (Math.random() - 0.5) * 10 :
+      symbol?.includes("BTC") ? 67500 + (Math.random() - 0.5) * 500 :
+      1.0850 + (Math.random() - 0.5) * 0.002
+    );
+    const slippage = executionPrice * 0.0001 * (Math.random() - 0.5);
+    const finalPrice = executionPrice + slippage;
+
+    req.log.info({ botId: bot.id, action, symbol, size, price: finalPrice }, "Trade executed");
+
+    res.json({
+      success: true,
+      orderId: `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      action,
+      symbol: symbol || bot.market,
+      size: size || 0.01,
+      executionPrice: Math.round(finalPrice * 100000) / 100000,
+      slippage: Math.round(Math.abs(slippage) * 100000) / 100000,
+      executionTime: Math.round(12 + Math.random() * 38), // ms
+      timestamp: new Date().toISOString(),
+    });
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });

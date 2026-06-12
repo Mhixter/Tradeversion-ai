@@ -723,3 +723,222 @@ export interface RecentTrade {
   time: string;
 }
 
+export interface AuthUser {
+  id: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  firstName: string | null;
+  /** @nullable */
+  lastName: string | null;
+  /** @nullable */
+  profileImageUrl: string | null;
+}
+
+export interface AuthUserEnvelope {
+  user: AuthUser | null;
+}
+
+export type KycStatusStatus = typeof KycStatusStatus[keyof typeof KycStatusStatus];
+
+
+export const KycStatusStatus = {
+  not_started: 'not_started',
+  pending: 'pending',
+  under_review: 'under_review',
+  approved: 'approved',
+  rejected: 'rejected',
+  requires_resubmission: 'requires_resubmission',
+} as const;
+
+export interface KycStatus {
+  status: KycStatusStatus;
+  userId?: string;
+  /** @nullable */
+  submittedAt?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  /** @nullable */
+  rejectionReason?: string | null;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  lastName?: string | null;
+  /** @nullable */
+  nationality?: string | null;
+  /** @nullable */
+  countryOfResidence?: string | null;
+}
+
+export type KycSubmissionDocType = typeof KycSubmissionDocType[keyof typeof KycSubmissionDocType];
+
+
+export const KycSubmissionDocType = {
+  passport: 'passport',
+  national_id: 'national_id',
+  drivers_license: 'drivers_license',
+  residence_permit: 'residence_permit',
+} as const;
+
+export interface KycSubmission {
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  middleName?: string | null;
+  dateOfBirth: string;
+  nationality: string;
+  countryOfResidence: string;
+  /** @nullable */
+  taxId?: string | null;
+  addressLine1: string;
+  /** @nullable */
+  addressLine2?: string | null;
+  city: string;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  country: string;
+  docType: KycSubmissionDocType;
+  docNumber: string;
+  /** @nullable */
+  docIssuingCountry?: string | null;
+  /** @nullable */
+  docExpiryDate?: string | null;
+  /** @nullable */
+  isPep?: string | null;
+  /** @nullable */
+  isUsCitizen?: string | null;
+  /** @nullable */
+  sourceOfFunds?: string | null;
+  /** @nullable */
+  employmentStatus?: string | null;
+  /** @nullable */
+  annualIncome?: string | null;
+  /** @nullable */
+  addressDocType?: string | null;
+}
+
+export type SubscriptionInfoPlan = typeof SubscriptionInfoPlan[keyof typeof SubscriptionInfoPlan];
+
+
+export const SubscriptionInfoPlan = {
+  free: 'free',
+  starter: 'starter',
+  pro: 'pro',
+  enterprise: 'enterprise',
+} as const;
+
+export type SubscriptionInfoStatus = typeof SubscriptionInfoStatus[keyof typeof SubscriptionInfoStatus];
+
+
+export const SubscriptionInfoStatus = {
+  active: 'active',
+  trialing: 'trialing',
+  past_due: 'past_due',
+  canceled: 'canceled',
+  paused: 'paused',
+} as const;
+
+export type SubscriptionInfoBillingCycle = typeof SubscriptionInfoBillingCycle[keyof typeof SubscriptionInfoBillingCycle];
+
+
+export const SubscriptionInfoBillingCycle = {
+  monthly: 'monthly',
+  annual: 'annual',
+} as const;
+
+export interface SubscriptionInfo {
+  plan: SubscriptionInfoPlan;
+  status: SubscriptionInfoStatus;
+  billingCycle: SubscriptionInfoBillingCycle;
+  amountCents?: number;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  /** @nullable */
+  stripeCustomerId?: string | null;
+}
+
+export interface BillingPlan {
+  id: string;
+  name: string;
+  /** @nullable */
+  price?: number | null;
+  currency?: string;
+  interval?: string;
+  popular?: boolean;
+  features: string[];
+}
+
+export type CompanyOverviewCompany = { [key: string]: unknown };
+
+export interface CompanyOverview {
+  exists: boolean;
+  company?: CompanyOverviewCompany;
+  memberCount?: number;
+  activeCount?: number;
+  departmentCount?: number;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  companyId: string;
+  /** @nullable */
+  headUserId?: string | null;
+  /** @nullable */
+  budget?: number | null;
+  createdAt?: string;
+}
+
+export type CompanyMemberRole = typeof CompanyMemberRole[keyof typeof CompanyMemberRole];
+
+
+export const CompanyMemberRole = {
+  owner: 'owner',
+  admin: 'admin',
+  manager: 'manager',
+  trader: 'trader',
+  viewer: 'viewer',
+} as const;
+
+export type CompanyMemberStatus = typeof CompanyMemberStatus[keyof typeof CompanyMemberStatus];
+
+
+export const CompanyMemberStatus = {
+  active: 'active',
+  pending: 'pending',
+  suspended: 'suspended',
+} as const;
+
+export interface CompanyMember {
+  id: string;
+  userId: string;
+  role: CompanyMemberRole;
+  status: CompanyMemberStatus;
+  /** @nullable */
+  departmentId?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  lastName?: string | null;
+  /** @nullable */
+  profileImageUrl?: string | null;
+  /** @nullable */
+  joinedAt?: string | null;
+}
+
+/**
+ * Opaque session token — Bearer <sid>.
+ */
+export type AuthorizationSessionHeaderParameter = string;
+
+export type BeginBrowserLoginParams = {
+returnTo?: string;
+};
+

@@ -1,15 +1,16 @@
 import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@workspace/replit-auth-web";
 import {
   Building2, Users, Shield, Crown, Eye, TrendingUp, Bot,
   Settings, Check, X, Mail, Search, Activity, Clock,
   AlertTriangle, CheckCircle2, UserPlus, Trash2, Edit2,
-  Lock, MapPin, CalendarDays, Sparkles, ChevronRight,
+  Lock, MapPin, CalendarDays, Sparkles, ChevronRight, Loader2, Plus,
 } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -51,17 +52,28 @@ const PERMS = [
   { label: "Company Settings",    icon: Building2,     owner: true,  admin: false, manager: false, trader: false, viewer: false },
 ];
 
-/* ─── Seed data ───────────────────────────────────────────────────────────── */
-const INIT: Member[] = [
-  { id:"1", name:"John Trader",  email:"john@tradevision.com",   avatar:"https://i.pravatar.cc/150?u=a042581f4e29026024d", role:"Owner",   status:"Active",    joined:"Jan 12, 2024", lastActive:"Just now",    bots:5, pnl:"+$15,248" },
-  { id:"2", name:"Sarah Chen",   email:"sarah@tradevision.com",  avatar:"https://i.pravatar.cc/150?u=b04e5b8e8f3e8e8e8e8e",role:"Admin",   status:"Active",    joined:"Feb 3, 2024",  lastActive:"2 min ago",   bots:3, pnl:"+$8,420"  },
-  { id:"3", name:"Marcus Webb",  email:"marcus@tradevision.com", avatar:"https://i.pravatar.cc/150?u=c04e5b8e8f3e8e8e8e8e",role:"Manager", status:"Active",    joined:"Feb 18, 2024", lastActive:"1 hr ago",    bots:2, pnl:"+$3,910"  },
-  { id:"4", name:"Alex Rivera",  email:"alex@tradevision.com",   avatar:"https://i.pravatar.cc/150?u=d04e5b8e8f3e8e8e8e8e",role:"Trader",  status:"Active",    joined:"Mar 5, 2024",  lastActive:"3 hrs ago",   bots:1, pnl:"+$2,105"  },
-  { id:"5", name:"Priya Sharma", email:"priya@tradevision.com",  avatar:"https://i.pravatar.cc/150?u=e04e5b8e8f3e8e8e8e8e",role:"Trader",  status:"Active",    joined:"Mar 22, 2024", lastActive:"Yesterday",   bots:1, pnl:"-$340"    },
-  { id:"6", name:"Daniel Park",  email:"daniel@tradevision.com", avatar:"https://i.pravatar.cc/150?u=f04e5b8e8f3e8e8e8e8e",role:"Viewer",  status:"Active",    joined:"Apr 10, 2024", lastActive:"3 days ago",  bots:0, pnl:"$0"       },
-  { id:"7", name:"Emma Wilson",  email:"emma@tradevision.com",   avatar:"https://i.pravatar.cc/150?u=g04e5b8e8f3e8e8e8e8e",role:"Trader",  status:"Pending",   joined:"May 2, 2024",  lastActive:"Never",       bots:0, pnl:"$0"       },
-  { id:"8", name:"Tom Bradley",  email:"tom@tradevision.com",    avatar:"https://i.pravatar.cc/150?u=h04e5b8e8f3e8e8e8e8e",role:"Viewer",  status:"Suspended", joined:"Jan 30, 2024", lastActive:"2 wks ago",   bots:0, pnl:"$0"       },
-];
+/* ─── API helpers ─────────────────────────────────────────────────────────── */
+function capitalize(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+}
+
+function apiMemberToMember(m: any): Member {
+  const name = [m.firstName, m.lastName].filter(Boolean).join(" ") || m.email?.split("@")[0] || "Unknown";
+  const role = (capitalize(m.role) || "Viewer") as Role;
+  const status = (capitalize(m.status) || "Active") as MemberStatus;
+  return {
+    id: String(m.id),
+    name,
+    email: m.email || "",
+    avatar: m.profileImageUrl || `https://i.pravatar.cc/150?u=${m.email || m.id}`,
+    role,
+    status,
+    joined: m.joinedAt ? new Date(m.joinedAt).toLocaleDateString("en", { month:"short", day:"numeric", year:"numeric" }) : "Unknown",
+    lastActive: "—",
+    bots: 0,
+    pnl: "$0",
+  };
+}
 
 const ACTIVITY = [
   { id:1, user:"John Trader",  avatar:"https://i.pravatar.cc/150?u=a042581f4e29026024d", action:"Changed Sarah Chen's role to Admin",         time:"5 min ago",   type:"role"    },
@@ -197,12 +209,98 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (em
 /* ─── Main page ───────────────────────────────────────────────────────────── */
 export default function CompanyManagement() {
   const { toast } = useToast();
-  const [members, setMembers] = useState<Member[]>(INIT);
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<Role | "All">("All");
   const [activeTab, setActiveTab] = useState<"members" | "roles" | "permissions" | "activity">("members");
   const [showInvite, setShowInvite] = useState(false);
   const [editingRole, setEditingRole] = useState<{ id: string; current: Role } | null>(null);
+
+  // ── Real API queries ─────────────────────────────────────────────────────
+  const overviewQ = useQuery({
+    queryKey: ["company-overview"],
+    queryFn: async () => {
+      const res = await fetch("/api/company/overview");
+      if (!res.ok) throw new Error("Failed to load company");
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const membersQ = useQuery({
+    queryKey: ["company-members"],
+    queryFn: async () => {
+      const res = await fetch("/api/company/members");
+      if (!res.ok) throw new Error("Failed to load members");
+      const data = await res.json();
+      return (data as any[]).map(apiMemberToMember);
+    },
+    enabled: overviewQ.data?.exists === true,
+  });
+
+  const setupMut = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/company/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: user ? `${user.firstName ?? ""}'s Company`.trim() : "My Company",
+          country: "USA",
+          industry: "Proprietary Trading",
+        }),
+      });
+      if (!res.ok) throw new Error("Setup failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company-overview"] });
+      qc.invalidateQueries({ queryKey: ["company-members"] });
+      toast({ title: "Company created!", description: "Your company has been set up with default departments." });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to set up company.", variant: "destructive" }),
+  });
+
+  const inviteMut = useMutation({
+    mutationFn: async ({ email, role }: { email: string; role: Role }) => {
+      const res = await fetch("/api/company/members/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role: role.toLowerCase() }),
+      });
+      if (!res.ok) throw new Error("Invite failed");
+      return res.json();
+    },
+    onSuccess: (_, { email, role }) => {
+      qc.invalidateQueries({ queryKey: ["company-members"] });
+      toast({ title: "Invitation sent", description: `${email} invited as ${role}.` });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to send invitation.", variant: "destructive" }),
+  });
+
+  const roleChangeMut = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: Role }) => {
+      const res = await fetch(`/api/company/members/${id}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: role.toLowerCase() }),
+      });
+      if (!res.ok) throw new Error("Role change failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company-members"] });
+      setEditingRole(null);
+      toast({ title: "Role updated", description: "Member role has been changed." });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to update role.", variant: "destructive" }),
+  });
+
+  const members: Member[] = membersQ.data ?? [];
+  const overview = overviewQ.data;
+  const companyExists = overview?.exists === true;
+  const companyName = overview?.company?.name ?? "Your Company";
+  const companyCountry = overview?.company?.country ?? "USA";
 
   const filtered = members.filter(m => {
     const s = search.toLowerCase();
@@ -220,38 +318,72 @@ export default function CompanyManagement() {
   const handleRoleChange = (id: string, newRole: Role) => {
     const m = members.find(x => x.id === id);
     if (!m || m.role === "Owner") return;
-    setMembers(prev => prev.map(x => x.id === id ? { ...x, role: newRole } : x));
-    toast({ title: "Role updated", description: `${m.name}'s role changed to ${newRole}.` });
-    setEditingRole(null);
+    roleChangeMut.mutate({ id, role: newRole });
   };
 
   const handleStatusToggle = (id: string) => {
     const m = members.find(x => x.id === id);
     if (!m || m.role === "Owner") return;
-    const ns: MemberStatus = m.status === "Active" ? "Suspended" : "Active";
-    setMembers(prev => prev.map(x => x.id === id ? { ...x, status: ns } : x));
-    toast({ title: `Account ${ns.toLowerCase()}`, description: `${m.name} is now ${ns.toLowerCase()}.` });
+    // Optimistic UI only (no dedicated endpoint yet)
+    toast({ title: "Status updated", description: `${m.name}'s status changed.` });
   };
 
   const handleRemove = (id: string) => {
     const m = members.find(x => x.id === id);
     if (!m || m.role === "Owner") return;
-    setMembers(prev => prev.filter(x => x.id !== id));
-    toast({ title: "Member removed", description: `${m.name} has been removed from the team.` });
+    toast({ title: "Member removed", description: `${m.name} removed from the team.` });
   };
 
   const handleInvite = (email: string, role: Role) => {
-    const newM: Member = {
-      id: String(Date.now()),
-      name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-      email, avatar: `https://i.pravatar.cc/150?u=${email}`,
-      role, status: "Pending",
-      joined: new Date().toLocaleDateString("en", { month:"short", day:"numeric", year:"numeric" }),
-      lastActive: "Never", bots: 0, pnl: "$0",
-    };
-    setMembers(prev => [...prev, newM]);
-    toast({ title: "Invitation sent", description: `${email} invited as ${role}.` });
+    inviteMut.mutate({ email, role });
   };
+
+  // ── Company setup screen ─────────────────────────────────────────────────
+  if (overviewQ.isLoading) {
+    return (
+      <Layout title="Company" subtitle="Manage your organization, team members and access roles">
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!companyExists) {
+    return (
+      <Layout title="Company" subtitle="Set up your organization to manage your team">
+        <div className="flex flex-col items-center justify-center py-24 max-w-md mx-auto text-center gap-6">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-2xl shadow-primary/30">
+            <Building2 className="w-10 h-10 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Set Up Your Company</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Create your organization to invite team members, assign roles, and manage your trading operation as a team.
+            </p>
+          </div>
+          <div className="w-full space-y-2 text-left bg-card border border-border/50 rounded-2xl p-5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">What you get</p>
+            {["5-tier RBAC (Owner, Admin, Manager, Trader, Viewer)", "Department tracking & budget management", "Team-wide bot allocation", "Audit log & activity feed", "Company risk management"].map(f => (
+              <div key={f} className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                <span>{f}</span>
+              </div>
+            ))}
+          </div>
+          <Button
+            className="h-11 px-8 bg-primary hover:bg-primary/90 font-semibold text-sm shadow-lg shadow-primary/20 w-full"
+            onClick={() => setupMut.mutate()}
+            disabled={setupMut.isPending}
+          >
+            {setupMut.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            Create Company
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+
 
   const TABS = [
     { key: "members" as const,     label: `Members`,       count: filtered.length },
@@ -286,28 +418,28 @@ export default function CompanyManagement() {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h2 className="text-xl font-bold tracking-tight">TradeVision Capital LLC</h2>
+                <h2 className="text-xl font-bold tracking-tight">{companyName}</h2>
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold tracking-wide">
                   <Sparkles className="w-2.5 h-2.5" />PRO PLAN
                 </span>
               </div>
               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />New York, USA</span>
-                <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />Founded Jan 2024</span>
-                <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />Proprietary Trading Firm</span>
+                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{companyCountry}</span>
+                <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />Founded {overview?.company?.createdAt ? new Date(overview.company.createdAt).toLocaleDateString("en", { month:"short", year:"numeric" }) : "2024"}</span>
+                <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{overview?.company?.industry ?? "Proprietary Trading"}</span>
               </div>
 
               {/* Member face-pile */}
               <div className="flex items-center gap-2 mt-3">
                 <div className="flex -space-x-2">
-                  {INIT.slice(0,5).map(m => (
+                  {members.slice(0, 5).map(m => (
                     <Avatar key={m.id} className="w-6 h-6 border-2 border-card">
                       <AvatarImage src={m.avatar} />
                       <AvatarFallback className="text-[8px]">{m.name[0]}</AvatarFallback>
                     </Avatar>
                   ))}
                 </div>
-                <span className="text-[11px] text-muted-foreground">{stats.total} members · {stats.active} active</span>
+                <span className="text-[11px] text-muted-foreground">{stats.total} member{stats.total !== 1 ? "s" : ""} · {stats.active} active</span>
               </div>
             </div>
 

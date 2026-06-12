@@ -56,7 +56,7 @@ export default function RiskCenter() {
                           <div className="w-full max-w-[140px] sm:max-w-[200px] flex items-center gap-2 sm:gap-3">
                             <div className="flex-1 h-1.5 sm:h-2 bg-accent rounded-full overflow-hidden">
                               <div 
-                                className={`h-full ${limit.usagePercent > 80 ? 'bg-destructive' : limit.usagePercent > 50 ? 'bg-amber-500' : 'bg-primary'}`} 
+                                className={`h-full ${(limit.usagePercent ?? 0) > 80 ? 'bg-destructive' : (limit.usagePercent ?? 0) > 50 ? 'bg-amber-500' : 'bg-primary'}`} 
                                 style={{ width: `${Math.min(limit.usagePercent || 0, 100)}%` }}
                               ></div>
                             </div>

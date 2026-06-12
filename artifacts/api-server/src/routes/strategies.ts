@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, strategiesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { STRATEGY_TEMPLATES } from "../lib/strategyEngine";
 
 const router = Router();
 
@@ -12,6 +13,7 @@ const mapStrategy = (s: typeof strategiesTable.$inferSelect) => ({
   magicNumber: s.magicNumber,
 });
 
+// GET /api/strategies — DB strategies
 router.get("/strategies", async (req, res) => {
   try {
     const rows = await db.select().from(strategiesTable);
@@ -20,6 +22,21 @@ router.get("/strategies", async (req, res) => {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+// GET /api/strategies/templates — Professional strategy templates
+router.get("/strategies/templates", (_req, res) => {
+  res.json(STRATEGY_TEMPLATES);
+});
+
+// GET /api/strategies/templates/:id — Single template
+router.get("/strategies/templates/:id", (req, res) => {
+  const template = STRATEGY_TEMPLATES.find(t => t.id === req.params.id);
+  if (!template) {
+    res.status(404).json({ error: "Template not found" });
+    return;
+  }
+  res.json(template);
 });
 
 router.post("/strategies", async (req, res) => {
@@ -40,8 +57,12 @@ router.post("/strategies", async (req, res) => {
 
 router.get("/strategies/:id", async (req, res) => {
   try {
+    if (isNaN(parseInt(req.params.id))) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
     const [row] = await db.select().from(strategiesTable).where(eq(strategiesTable.id, parseInt(req.params.id)));
-    if (!row) return res.status(404).json({ error: "Strategy not found" });
+    if (!row) { res.status(404).json({ error: "Strategy not found" }); return; }
     res.json(mapStrategy(row));
   } catch (e) {
     req.log.error(e);
@@ -59,7 +80,6 @@ router.patch("/strategies/:id", async (req, res) => {
     if (takeProfit !== undefined) update.takeProfit = String(takeProfit);
     if (stopLoss !== undefined) update.stopLoss = String(stopLoss);
     const [updated] = await db.update(strategiesTable).set(update).where(eq(strategiesTable.id, parseInt(req.params.id))).returning();
-    if (!updated) return res.status(404).json({ error: "Strategy not found" });
     res.json(mapStrategy(updated));
   } catch (e) {
     req.log.error(e);
@@ -67,22 +87,14 @@ router.patch("/strategies/:id", async (req, res) => {
   }
 });
 
-router.post("/strategies/:id/deploy", async (req, res) => {
+router.delete("/strategies/:id", async (req, res) => {
   try {
-    const [updated] = await db.update(strategiesTable).set({ status: "DEPLOYED" }).where(eq(strategiesTable.id, parseInt(req.params.id))).returning();
-    if (!updated) return res.status(404).json({ error: "Strategy not found" });
-    res.json(mapStrategy(updated));
+    await db.delete(strategiesTable).where(eq(strategiesTable.id, parseInt(req.params.id)));
+    res.status(204).send();
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });
   }
-});
-
-router.get("/strategies/:id/backtest-preview", async (req, res) => {
-  res.json({
-    netProfit: 12540.75, totalReturn: 25.08, profitFactor: 1.87,
-    winRate: 78.57, totalTrades: 126, sharpeRatio: 2.14, maxDrawdown: 4.12, expectancy: 99.53,
-  });
 });
 
 export default router;

@@ -39,7 +39,7 @@ export default function Notifications() {
               <Badge variant="outline" className="cursor-pointer px-2.5 py-1 hover:bg-accent text-xs whitespace-nowrap hidden sm:flex">Trading</Badge>
               <Badge variant="outline" className="cursor-pointer px-2.5 py-1 hover:bg-accent text-xs whitespace-nowrap hidden sm:flex">System</Badge>
             </div>
-            <Button variant="ghost" size="sm" className="shrink-0 text-xs h-7 sm:h-8" onClick={() => markAllRead.mutate({})}>
+            <Button variant="ghost" size="sm" className="shrink-0 text-xs h-7 sm:h-8" onClick={() => markAllRead.mutate(undefined as unknown as void)}>
               Mark all read
             </Button>
           </div>

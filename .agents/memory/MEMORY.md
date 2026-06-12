@@ -1,0 +1,4 @@
+- [TradeVision Auth Architecture](tradevision-auth.md) — Replit OIDC auth wired; zod must be explicit dep in api-server; session via cookie not header.
+- [TradeVision Strategy Engine](tradevision-strategy-engine.md) — 8 real strategy templates with technical indicators in lib/strategyEngine.ts; bots have start/stop/pause/signal/execute endpoints.
+- [TradeVision DB Schema](tradevision-db-schema.md) — company setup is POST /api/company/setup (auto-creates owner member + 3 default departments); members joined via innerJoin with usersTable.
+- [TradeVision Seeding](tradevision-seeding.md) — Production seed script at scripts/src/seed-production.ts; run with pnpm --filter @workspace/scripts run seed:prod; idempotent (skips if table has data).

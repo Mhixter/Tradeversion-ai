@@ -3,14 +3,16 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, GitBranch, Bot, Store, LineChart, Users,
   PieChart, ShieldAlert, Bell, Settings, Moon, Sun, X,
-  Diamond, Building2,
+  Diamond, Building2, CreditCard, Shield, LogOut, Crown,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@workspace/replit-auth-web";
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const [location] = useLocation();
   const [isDark, setIsDark] = useState(true);
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const stored = localStorage.getItem("tv-theme");
@@ -27,18 +29,27 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   };
 
   const navItems = [
-    { name: "Dashboard",       href: "/",              icon: LayoutDashboard },
-    { name: "Strategy Buil…",  href: "/strategy-builder", icon: GitBranch   },
-    { name: "Bot Manager",     href: "/bot-manager",   icon: Bot             },
-    { name: "AI Marketplace",  href: "/ai-marketplace",icon: Store           },
-    { name: "Backtesting",     href: "/backtesting",   icon: LineChart       },
-    { name: "Copy Trading",    href: "/copy-trading",  icon: Users           },
-    { name: "Portfolio",       href: "/portfolio",     icon: PieChart        },
-    { name: "Risk Center",     href: "/risk-center",   icon: ShieldAlert     },
-    { name: "Notifications",   href: "/notifications", icon: Bell, badge: 8  },
-    { name: "Company",         href: "/company",       icon: Building2       },
-    { name: "Settings",        href: "/settings",      icon: Settings        },
+    { name: "Dashboard",       href: "/",                  icon: LayoutDashboard },
+    { name: "Strategy Buil…",  href: "/strategy-builder",  icon: GitBranch       },
+    { name: "Bot Manager",     href: "/bot-manager",        icon: Bot             },
+    { name: "AI Marketplace",  href: "/ai-marketplace",    icon: Store           },
+    { name: "Backtesting",     href: "/backtesting",        icon: LineChart       },
+    { name: "Copy Trading",    href: "/copy-trading",       icon: Users           },
+    { name: "Portfolio",       href: "/portfolio",          icon: PieChart        },
+    { name: "Risk Center",     href: "/risk-center",        icon: ShieldAlert     },
+    { name: "Notifications",   href: "/notifications",      icon: Bell, badge: 8  },
+    { name: "Company",         href: "/company",            icon: Building2       },
+    { name: "KYC",             href: "/kyc",                icon: Shield          },
+    { name: "Billing",         href: "/billing",            icon: CreditCard      },
+    { name: "Settings",        href: "/settings",           icon: Settings        },
   ];
+
+  const initials = user
+    ? `${(user.firstName?.[0] ?? "")}${(user.lastName?.[0] ?? "")}`.toUpperCase() || "U"
+    : "U";
+  const displayName = user
+    ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email || "User"
+    : "User";
 
   return (
     <div className="w-[160px] shrink-0 bg-sidebar border-r border-border flex flex-col h-full overflow-y-auto overflow-x-hidden">
@@ -58,7 +69,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2">
+      <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
           return (
@@ -88,15 +99,18 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Bottom */}
       <div className="px-2 pb-3 border-t border-border flex flex-col gap-2 pt-2 shrink-0">
         {/* Upgrade box */}
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl p-3 text-white">
-          <p className="text-[10px] font-bold mb-0.5">Upgrade Plan</p>
-          <p className="text-[9px] text-white/70 mb-2 leading-tight">Unlock Advanced Portfolio Analytics</p>
-          <Link href="/settings" onClick={onClose}>
-            <Button variant="secondary" size="sm" className="w-full text-[10px] h-6 bg-white/20 hover:bg-white/30 text-white border-0">
-              Upgrade Now
-            </Button>
-          </Link>
-        </div>
+        <Link href="/billing" onClick={onClose}>
+          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl p-3 text-white cursor-pointer hover:opacity-90 transition-opacity">
+            <div className="flex items-center gap-1 mb-0.5">
+              <Crown className="w-3 h-3" />
+              <p className="text-[10px] font-bold">Upgrade Plan</p>
+            </div>
+            <p className="text-[9px] text-white/70 mb-2 leading-tight">Unlock Advanced AI Trading</p>
+            <div className="text-center py-1 rounded-md bg-white/20 hover:bg-white/30 text-white text-[10px] font-semibold">
+              View Plans
+            </div>
+          </div>
+        </Link>
 
         {/* Theme toggle */}
         <button
@@ -112,18 +126,23 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         </button>
 
         {/* User */}
-        <Link href="/account" onClick={onClose}>
-          <div className="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-accent transition-colors">
-            <Avatar className="w-7 h-7 shrink-0">
-              <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026024d" />
-              <AvatarFallback className="text-[10px]">JT</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground truncate leading-tight">John Trader</p>
-              <p className="text-[10px] text-primary font-semibold leading-tight">PRO</p>
-            </div>
+        <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors group">
+          <Avatar className="w-7 h-7 shrink-0">
+            <AvatarImage src={user?.profileImageUrl ?? undefined} />
+            <AvatarFallback className="text-[10px] bg-primary/20 text-primary font-bold">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-foreground truncate leading-tight">{displayName}</p>
+            <p className="text-[10px] text-primary font-semibold leading-tight">PRO</p>
           </div>
-        </Link>
+          <button
+            onClick={logout}
+            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 text-muted-foreground hover:text-destructive"
+            title="Sign out"
+          >
+            <LogOut className="w-3 h-3" />
+          </button>
+        </div>
       </div>
     </div>
   );

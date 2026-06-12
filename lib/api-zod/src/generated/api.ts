@@ -1129,3 +1129,171 @@ export const GetTradeAnalyticsResponse = zod.object({
 })
 
 
+/**
+ * @summary Get the currently authenticated user
+ */
+export const GetCurrentAuthUserHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — Bearer <sid>.')
+})
+
+export const GetCurrentAuthUserResponse = zod.object({
+  "user": zod.union([zod.object({
+  "id": zod.string(),
+  "email": zod.string().nullable(),
+  "firstName": zod.string().nullable(),
+  "lastName": zod.string().nullable(),
+  "profileImageUrl": zod.string().nullable()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Start the browser OIDC login flow
+ */
+export const BeginBrowserLoginQueryParams = zod.object({
+  "returnTo": zod.coerce.string().optional()
+})
+
+
+/**
+ * @summary Clear the session and begin OIDC logout
+ */
+export const LogoutBrowserSessionHeader = zod.object({
+  "Authorization": zod.string().optional().describe('Opaque session token — Bearer <sid>.')
+})
+
+
+/**
+ * @summary Get current user KYC status
+ */
+export const GetKycStatusResponse = zod.object({
+  "status": zod.enum(['not_started', 'pending', 'under_review', 'approved', 'rejected', 'requires_resubmission']),
+  "userId": zod.string().optional(),
+  "submittedAt": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "countryOfResidence": zod.string().nullish()
+})
+
+
+/**
+ * @summary Submit KYC verification data
+ */
+export const SubmitKycBody = zod.object({
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "middleName": zod.string().nullish(),
+  "dateOfBirth": zod.string(),
+  "nationality": zod.string(),
+  "countryOfResidence": zod.string(),
+  "taxId": zod.string().nullish(),
+  "addressLine1": zod.string(),
+  "addressLine2": zod.string().nullish(),
+  "city": zod.string(),
+  "state": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "country": zod.string(),
+  "docType": zod.enum(['passport', 'national_id', 'drivers_license', 'residence_permit']),
+  "docNumber": zod.string(),
+  "docIssuingCountry": zod.string().nullish(),
+  "docExpiryDate": zod.string().nullish(),
+  "isPep": zod.string().nullish(),
+  "isUsCitizen": zod.string().nullish(),
+  "sourceOfFunds": zod.string().nullish(),
+  "employmentStatus": zod.string().nullish(),
+  "annualIncome": zod.string().nullish(),
+  "addressDocType": zod.string().nullish()
+})
+
+export const SubmitKycResponse = zod.object({
+  "status": zod.enum(['not_started', 'pending', 'under_review', 'approved', 'rejected', 'requires_resubmission']),
+  "userId": zod.string().optional(),
+  "submittedAt": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "rejectionReason": zod.string().nullish(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
+  "countryOfResidence": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get current subscription
+ */
+export const GetSubscriptionResponse = zod.object({
+  "plan": zod.enum(['free', 'starter', 'pro', 'enterprise']),
+  "status": zod.enum(['active', 'trialing', 'past_due', 'canceled', 'paused']),
+  "billingCycle": zod.enum(['monthly', 'annual']),
+  "amountCents": zod.number().optional(),
+  "trialEndsAt": zod.string().nullish(),
+  "currentPeriodEnd": zod.string().nullish(),
+  "cancelAtPeriodEnd": zod.boolean().optional(),
+  "stripeCustomerId": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get available billing plans
+ */
+export const GetBillingPlansResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "price": zod.number().nullish(),
+  "currency": zod.string().optional(),
+  "interval": zod.string().optional(),
+  "popular": zod.boolean().optional(),
+  "features": zod.array(zod.string())
+})
+export const GetBillingPlansResponse = zod.array(GetBillingPlansResponseItem)
+
+
+/**
+ * @summary Get company overview with department stats
+ */
+export const GetCompanyOverviewResponse = zod.object({
+  "exists": zod.boolean(),
+  "company": zod.object({
+
+}).passthrough().optional(),
+  "memberCount": zod.number().optional(),
+  "activeCount": zod.number().optional(),
+  "departmentCount": zod.number().optional()
+})
+
+
+/**
+ * @summary List company departments
+ */
+export const GetDepartmentsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "companyId": zod.string(),
+  "headUserId": zod.string().nullish(),
+  "budget": zod.number().nullish(),
+  "createdAt": zod.string().optional()
+})
+export const GetDepartmentsResponse = zod.array(GetDepartmentsResponseItem)
+
+
+/**
+ * @summary List company members
+ */
+export const GetCompanyMembersResponseItem = zod.object({
+  "id": zod.string(),
+  "userId": zod.string(),
+  "role": zod.enum(['owner', 'admin', 'manager', 'trader', 'viewer']),
+  "status": zod.enum(['active', 'pending', 'suspended']),
+  "departmentId": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "firstName": zod.string().nullish(),
+  "lastName": zod.string().nullish(),
+  "profileImageUrl": zod.string().nullish(),
+  "joinedAt": zod.string().nullish()
+})
+export const GetCompanyMembersResponse = zod.array(GetCompanyMembersResponseItem)
+
+
