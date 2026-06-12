@@ -17,6 +17,12 @@ import billingRouter from "./billing";
 import companyRouter from "./company";
 import companyAdminRouter from "./companyadmin";
 import adminTradingRouter from "./admintrading";
+import signalsRouter from "./signals";
+import positionsRouter from "./positions";
+import executionsRouter from "./executions";
+import analyticsRouter from "./analytics";
+import emergencyRouter from "./emergency";
+import riskEngineRouter from "./riskengine";
 
 const router: IRouter = Router();
 
@@ -38,5 +44,11 @@ router.use(billingRouter);
 router.use(companyRouter);
 router.use(companyAdminRouter);
 router.use(adminTradingRouter);
+router.use(signalsRouter);
+router.use(positionsRouter);
+router.use(executionsRouter);
+router.use(analyticsRouter);
+router.use(emergencyRouter);
+router.use(riskEngineRouter);
 
 export default router;
