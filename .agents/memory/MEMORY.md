@@ -2,3 +2,5 @@
 - [TradeVision Strategy Engine](tradevision-strategy-engine.md) — 8 real strategy templates with technical indicators in lib/strategyEngine.ts; bots have start/stop/pause/signal/execute endpoints.
 - [TradeVision DB Schema](tradevision-db-schema.md) — company setup is POST /api/company/setup (auto-creates owner member + 3 default departments); members joined via innerJoin with usersTable.
 - [TradeVision Seeding](tradevision-seeding.md) — Production seed script at scripts/src/seed-production.ts; run with pnpm --filter @workspace/scripts run seed:prod; idempotent (skips if table has data).
+- [TradeVision Workflows](tradevision-workflows.md) — Two workflows: "API Server" (PORT=8081) and "TradeVision" (PORT=8080, BASE_PATH=/, API_PORT=8081); vite proxies /api to 8081; port 8080→80 is main view.
+- [TradeVision Admin Portal](tradevision-admin.md) — Full admin portal at /company-admin (separate from Replit auth); 8 tabs: overview, companies, users, bots, billing, support, live accounts, roles; admin creds in companyadmin.ts.

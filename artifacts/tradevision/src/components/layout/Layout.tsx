@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { StatusBar } from "./StatusBar";
 import { TopNavbar } from "./TopNavbar";
+import { MarketTickerBar } from "./MarketTickerBar";
 import { VerificationBanner } from "@/components/VerificationBanner";
 
 export function Layout({ children, title, subtitle }: { children: React.ReactNode, title?: string, subtitle?: string }) {
@@ -27,6 +28,7 @@ export function Layout({ children, title, subtitle }: { children: React.ReactNod
       </div>
 
       <div className="flex-1 flex flex-col min-w-0">
+        <MarketTickerBar />
         <TopNavbar title={title} subtitle={subtitle} onMenuClick={() => setSidebarOpen(true)} />
         <VerificationBanner />
         <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6">

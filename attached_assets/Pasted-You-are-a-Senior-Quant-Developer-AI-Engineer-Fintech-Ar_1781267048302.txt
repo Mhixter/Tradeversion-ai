@@ -1,0 +1,525 @@
+You are a Senior Quant Developer, AI Engineer, Fintech Architect, and MT5 Integration Specialist.
+
+Implement the backend infrastructure for my existing AI Trading Automation Platform.
+
+IMPORTANT BUSINESS RULES
+
+- The platform does NOT hold customer funds.
+- The platform is NOT a broker.
+- The platform does NOT support deposits or withdrawals.
+- Users keep funds inside their MT4/MT5 broker accounts.
+- The platform only manages:
+  - Trade execution
+  - Risk management
+  - AI signals
+  - Strategy automation
+  - Analytics
+  - Copy trading
+  - Marketplace subscriptions
+
+=================================================
+
+PHASE 1 IMPLEMENTATION
+
+FOUNDER MODE
+
+Initially only the Admin (Founder) can trade.
+
+No public users.
+
+No marketplace access.
+
+No copy trading access.
+
+Founder must be able to:
+
+- Connect MT4 account
+- Connect MT5 account
+- Create bots
+- Deploy bots
+- Execute live trades
+- Monitor executions
+- Run backtests
+- Track performance
+
+=================================================
+
+BROKER INTEGRATION
+
+Primary Provider:
+
+MetaApi
+
+Implement:
+
+BrokerConnectionService
+
+Functions:
+
+connectAccount()
+
+disconnectAccount()
+
+reconnectAccount()
+
+syncAccount()
+
+getBalance()
+
+getEquity()
+
+getMargin()
+
+getPositions()
+
+getOrders()
+
+getTradeHistory()
+
+placeBuyOrder()
+
+placeSellOrder()
+
+modifyOrder()
+
+closeOrder()
+
+closeAllOrders()
+
+=================================================
+
+DATABASE TABLES
+
+users
+
+broker_accounts
+
+bots
+
+strategies
+
+signals
+
+positions
+
+executions
+
+trade_history
+
+risk_profiles
+
+backtests
+
+notifications
+
+activity_logs
+
+performance_snapshots
+
+=================================================
+
+EXECUTION ENGINE
+
+Create services:
+
+SignalService
+
+ExecutionService
+
+PositionService
+
+TradeHistoryService
+
+Execution Flow:
+
+Signal Generated
+↓
+Risk Validation
+↓
+Execution Request
+↓
+MetaApi
+↓
+MT4/MT5 Broker
+↓
+Execution Report
+↓
+Database Update
+↓
+Analytics Update
+
+Store:
+
+signal_id
+
+execution_time
+
+latency
+
+symbol
+
+side
+
+volume
+
+status
+
+broker_ticket
+
+=================================================
+
+RISK ENGINE
+
+Every trade must pass:
+
+Max Daily Loss
+
+Max Drawdown
+
+Max Position Size
+
+Max Open Trades
+
+Max Exposure
+
+Margin Validation
+
+Equity Validation
+
+If validation fails:
+
+BLOCK TRADE
+
+Create:
+
+RiskEngineService
+
+Functions:
+
+validateTrade()
+
+calculateExposure()
+
+calculateDrawdown()
+
+calculateDailyLoss()
+
+calculateRiskScore()
+
+=================================================
+
+EMERGENCY CONTROLS
+
+Implement:
+
+Stop All Bots
+
+Close All Positions
+
+Disable Trading
+
+Kill Switch
+
+=================================================
+
+BOT ENGINE
+
+Implement modular architecture.
+
+Every bot contains:
+
+Signal Layer
+
+Strategy Layer
+
+Risk Layer
+
+Execution Layer
+
+Performance Layer
+
+=================================================
+
+BOT TYPES
+
+Implement templates:
+
+Gold Hunter AI
+
+Forex Scalper AI
+
+Trend Rider AI
+
+Swing Trader AI
+
+Breakout AI
+
+Momentum AI
+
+News AI
+
+Volatility AI
+
+=================================================
+
+STRATEGY BUILDER ENGINE
+
+Convert visual builder blocks into executable strategies.
+
+Example:
+
+RSI < 30
+
+EMA20 > EMA50
+
+AI Confidence > 80
+
+THEN BUY
+
+Store strategy as JSON.
+
+Compile strategy into executable engine.
+
+=================================================
+
+BACKTESTING ENGINE
+
+Implement:
+
+Historical Backtest
+
+Optimization
+
+Walk Forward Analysis
+
+Metrics:
+
+Net Profit
+
+Profit Factor
+
+Win Rate
+
+Drawdown
+
+Sharpe Ratio
+
+Sortino Ratio
+
+Recovery Factor
+
+Generate reports automatically.
+
+=================================================
+
+AI ENGINE
+
+Create modular AI service.
+
+Inputs:
+
+OHLC Data
+
+Volume
+
+ATR
+
+RSI
+
+EMA
+
+MACD
+
+Market Structure
+
+Outputs:
+
+BUY
+
+SELL
+
+HOLD
+
+EXIT
+
+Confidence Score
+
+Risk Score
+
+Do not allow AI to execute directly.
+
+All AI signals must pass:
+
+Strategy Layer
+
+Risk Engine
+
+Execution Engine
+
+=================================================
+
+ANALYTICS ENGINE
+
+Track:
+
+Daily PnL
+
+Weekly PnL
+
+Monthly PnL
+
+Win Rate
+
+Average Win
+
+Average Loss
+
+Profit Factor
+
+Sharpe Ratio
+
+Drawdown
+
+Recovery Factor
+
+Store daily snapshots.
+
+=================================================
+
+EXECUTION MONITOR
+
+Implement real-time monitoring.
+
+Display:
+
+Signal Time
+
+Execution Time
+
+Fill Time
+
+Latency
+
+Order Status
+
+Broker Ticket
+
+Execution Result
+
+=================================================
+
+FOUNDER DASHBOARD
+
+Display:
+
+Total Connected Equity
+
+Daily Profit
+
+Weekly Profit
+
+Monthly Profit
+
+Open Trades
+
+Running Bots
+
+Risk Score
+
+Drawdown
+
+Broker Status
+
+=================================================
+
+NOTIFICATIONS
+
+Support:
+
+Email
+
+Telegram
+
+Browser Notifications
+
+Trigger:
+
+Trade Opened
+
+Trade Closed
+
+Bot Started
+
+Bot Stopped
+
+Risk Alert
+
+Drawdown Alert
+
+Broker Disconnected
+
+=================================================
+
+SECURITY
+
+JWT
+
+2FA
+
+Role-Based Access
+
+AES-256 Encryption
+
+Secure Broker Credentials
+
+Audit Logging
+
+Session Management
+
+=================================================
+
+CODE REQUIREMENTS
+
+Use clean architecture.
+
+Use dependency injection.
+
+Use service layer pattern.
+
+Use repository pattern.
+
+Use event-driven architecture.
+
+Use background workers for bot execution.
+
+Use Redis queues.
+
+Use WebSockets for live updates.
+
+Use PostgreSQL for persistence.
+
+Provide:
+
+Database schema
+
+Services
+
+Controllers
+
+APIs
+
+Worker architecture
+
+Folder structure
+
+Implementation plan
+
+Migration scripts
+
+Production-ready code
+
+=================================================
+
+FINAL OBJECTIVE
+
+Create a production-ready founder-operated AI trading platform capable of connecting MT4/MT5 accounts, executing automated trades safely, managing risk, tracking performance, running backtests, and generating verified live trading results before opening the platform to public users.
