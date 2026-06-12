@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,11 +70,71 @@ export default function StrategyBuilder() {
   const [takeProfit, setTakeProfit] = useState("50");
   const [stopLoss, setStopLoss] = useState("25");
   const [zoom, setZoom] = useState(1);
-  const [nodes] = useState<CanvasNode[]>(DEFAULT_NODES);
+  const [nodes, setNodes] = useState<CanvasNode[]>(DEFAULT_NODES);
+  const [connections, setConnections] = useState<[string, string][]>(CONNECTIONS);
   const [activeTab, setActiveTab] = useState<"canvas" | "results">("canvas");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
+  const getCanvasPos = (e: React.MouseEvent | React.DragEvent) => {
+    if (!canvasRef.current) return { x: 0, y: 0 };
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left + canvasRef.current.scrollLeft - 32) / zoom;
+    const y = (e.clientY - rect.top + canvasRef.current.scrollTop - 56) / zoom;
+    return { x, y };
+  };
+
+  const getComponentType = (label: string): NodeType => {
+    if (["RSI (14)", "MACD", "EMA (21)", "SMA (50)", "ATR (14)", "ADX", "Bollinger Bands", "Stochastic", "CCI", "Volume"].includes(label)) return "indicator";
+    if (["AI Trend Predictor", "Sentiment Analysis", "Volatility Predictor", "Pattern Detector", "AI Signal Filter"].includes(label)) return "ai";
+    if (["Position Sizer", "Stop Loss", "Take Profit", "Trailing Stop", "Risk Firewall", "Daily Drawdown Guard"].includes(label)) return "risk";
+    if (["Market Order", "Limit Order", "Stop Order"].includes(label)) return "execute";
+    return "data";
+  };
+
+  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const pos = getCanvasPos(e);
+    const node = nodes.find(n => n.id === nodeId)!;
+    dragOffset.current = { x: pos.x - node.x, y: pos.y - node.y };
+    setDraggingNodeId(nodeId);
+    setSelectedNodeId(nodeId);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (!draggingNodeId) return;
+    const pos = getCanvasPos(e);
+    setNodes(prev => prev.map(n => n.id === draggingNodeId ? {
+      ...n,
+      x: Math.max(0, pos.x - dragOffset.current.x),
+      y: Math.max(0, pos.y - dragOffset.current.y),
+    } : n));
+  };
+
+  const handleCanvasMouseUp = () => setDraggingNodeId(null);
+
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const label = e.dataTransfer.getData("component");
+    if (!label) return;
+    const pos = getCanvasPos(e);
+    const type = getComponentType(label);
+    const newId = String(Date.now());
+    setNodes(prev => [...prev, { id: newId, label, type, x: Math.max(0, pos.x - 70), y: Math.max(0, pos.y - 20) }]);
+    toast({ title: "Component added", description: `"${label}" dropped onto canvas.` });
+  };
+
+  const deleteNode = (nodeId: string) => {
+    setNodes(prev => prev.filter(n => n.id !== nodeId));
+    setConnections(prev => prev.filter(([f, t]) => f !== nodeId && t !== nodeId));
+    if (selectedNodeId === nodeId) setSelectedNodeId(null);
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -213,21 +273,36 @@ export default function StrategyBuilder() {
 
             {activeTab === "canvas" ? (
               /* Node canvas */
-              <div className="absolute inset-0 overflow-auto p-8 pt-14">
-                <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: "1100px", height: "320px", position: "relative" }}>
+              <div
+                ref={canvasRef}
+                className="absolute inset-0 overflow-auto p-8 pt-14 select-none"
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+                onMouseLeave={handleCanvasMouseUp}
+                onDrop={handleCanvasDrop}
+                onDragOver={e => e.preventDefault()}
+                onClick={() => setSelectedNodeId(null)}
+                style={{ cursor: draggingNodeId ? "grabbing" : "default" }}
+              >
+                <div style={{ transform: `scale(${zoom})`, transformOrigin: "top left", width: "1100px", height: "380px", position: "relative" }}>
                   {/* SVG arrows */}
                   <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: "visible" }}>
-                    {CONNECTIONS.map(([from, to]) => {
+                    {connections.map(([from, to]) => {
                       const f = nodes.find(n => n.id === from);
                       const t = nodes.find(n => n.id === to);
                       if (!f || !t) return null;
-                      const x1 = f.x + 88, y1 = f.y + 24;
+                      const x1 = f.x + 140, y1 = f.y + 24;
                       const x2 = t.x, y2 = t.y + 24;
                       const cx = (x1 + x2) / 2;
+                      const isActive = selectedNodeId === from || selectedNodeId === to;
                       return (
                         <g key={`${from}-${to}`}>
-                          <path d={`M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`} stroke="hsl(var(--muted-foreground)/0.4)" strokeWidth="1.5" fill="none" />
-                          <polygon points={`${x2},${y2} ${x2 - 7},${y2 - 4} ${x2 - 7},${y2 + 4}`} fill="hsl(var(--muted-foreground)/0.4)" />
+                          <path d={`M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`}
+                            stroke={isActive ? "hsl(var(--primary)/0.8)" : "hsl(var(--muted-foreground)/0.4)"}
+                            strokeWidth={isActive ? 2 : 1.5} fill="none" />
+                          <polygon
+                            points={`${x2},${y2} ${x2 - 7},${y2 - 4} ${x2 - 7},${y2 + 4}`}
+                            fill={isActive ? "hsl(var(--primary)/0.8)" : "hsl(var(--muted-foreground)/0.4)"} />
                         </g>
                       );
                     })}
@@ -237,10 +312,17 @@ export default function StrategyBuilder() {
                   {nodes.map(node => (
                     <div
                       key={node.id}
-                      style={{ position: "absolute", left: node.x, top: node.y, width: 140 }}
-                      className={`border-2 rounded-xl px-3 py-3 cursor-default select-none shadow-md ${NODE_COLORS[node.type]}`}
+                      style={{ position: "absolute", left: node.x, top: node.y, width: 140, cursor: draggingNodeId === node.id ? "grabbing" : "grab" }}
+                      className={`border-2 rounded-xl px-3 py-3 shadow-md group transition-shadow ${NODE_COLORS[node.type]} ${selectedNodeId === node.id ? "ring-2 ring-primary shadow-primary/20 shadow-lg" : ""} ${draggingNodeId === node.id ? "opacity-80" : ""}`}
+                      onMouseDown={e => handleNodeMouseDown(e, node.id)}
+                      onClick={e => { e.stopPropagation(); setSelectedNodeId(node.id); }}
                       data-testid={`node-${node.id}`}
                     >
+                      <button
+                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-white text-[10px] leading-5 text-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-destructive/80"
+                        onClick={e => { e.stopPropagation(); deleteNode(node.id); }}
+                        data-testid={`delete-node-${node.id}`}
+                      >×</button>
                       <p className={`text-xs font-semibold text-center ${NODE_LABEL_COLORS[node.type]}`}>{node.label}</p>
                     </div>
                   ))}
@@ -368,9 +450,14 @@ function ComponentSection({ title, items }: { title: string; items: string[] }) 
             <div
               key={item}
               draggable
-              className="px-2.5 py-1.5 bg-background border border-border rounded-md text-xs hover:border-primary cursor-grab active:cursor-grabbing transition-colors"
+              onDragStart={e => {
+                e.dataTransfer.setData("component", item);
+                e.dataTransfer.effectAllowed = "copy";
+              }}
+              className="px-2.5 py-1.5 bg-background border border-border rounded-md text-xs hover:border-primary hover:bg-primary/5 cursor-grab active:cursor-grabbing transition-colors flex items-center gap-1.5"
               data-testid={`component-${item.toLowerCase().replace(/[\s()]+/g, "-")}`}
             >
+              <Move className="w-2.5 h-2.5 text-muted-foreground/50 shrink-0" />
               {item}
             </div>
           ))}
