@@ -15,6 +15,7 @@ import {
   Sun,
   X,
   Diamond,
+  Building2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: "Portfolio", href: "/portfolio", icon: PieChart },
     { name: "Risk Center", href: "/risk-center", icon: ShieldAlert },
     { name: "Notifications", href: "/notifications", icon: Bell, badge: 8 },
+    { name: "Company", href: "/company", icon: Building2 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 

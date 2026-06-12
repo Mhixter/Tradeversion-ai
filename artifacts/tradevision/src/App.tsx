@@ -15,6 +15,7 @@ import RiskCenter from "@/pages/RiskCenter";
 import Notifications from "@/pages/Notifications";
 import Settings from "@/pages/Settings";
 import Account from "@/pages/Account";
+import CompanyManagement from "@/pages/CompanyManagement";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/notifications" component={Notifications} />
       <Route path="/settings" component={Settings} />
       <Route path="/account" component={Account} />
+      <Route path="/company" component={CompanyManagement} />
       <Route component={NotFound} />
     </Switch>
   );
