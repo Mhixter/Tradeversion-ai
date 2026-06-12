@@ -10,12 +10,13 @@ import {
   UserCog, Key, Ban, Zap, MoreVertical, ArrowUpRight, ArrowDownRight,
   PlusCircle, Settings, ChevronDown,
 } from "lucide-react";
+import { LiveTradingTerminal } from "@/components/admin/LiveTradingTerminal";
 
 const DEFAULT_EMAIL = "saidumuhammed664@gmail.com";
 const DEFAULT_PASS  = "Mhixter664@gmail.com";
 const SESSION_KEY   = "company_admin_session";
 
-type AdminTab = "overview" | "companies" | "users" | "bots" | "billing" | "support" | "accounts" | "roles";
+type AdminTab = "overview" | "companies" | "users" | "bots" | "live-test" | "billing" | "support" | "accounts" | "roles";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -839,15 +840,16 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
 
   useEffect(() => { reload(); }, [reload]);
 
-  const tabs: { id: AdminTab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",   label: "Overview",       icon: BarChart2 },
-    { id: "companies",  label: "Companies",       icon: Building2 },
-    { id: "users",      label: "Users",           icon: Users },
-    { id: "bots",       label: "Bot Control",     icon: Bot },
-    { id: "billing",    label: "Billing",         icon: CreditCard },
-    { id: "support",    label: "Support",         icon: HeadphonesIcon },
-    { id: "accounts",   label: "Live Accounts",   icon: Wallet },
-    { id: "roles",      label: "Roles",           icon: Shield },
+  const tabs: { id: AdminTab; label: string; icon: React.ElementType; highlight?: boolean }[] = [
+    { id: "overview",   label: "Overview",         icon: BarChart2 },
+    { id: "companies",  label: "Companies",         icon: Building2 },
+    { id: "users",      label: "Users",             icon: Users },
+    { id: "bots",       label: "Bot Control",       icon: Bot },
+    { id: "live-test",  label: "Live Test Trading", icon: Zap, highlight: true },
+    { id: "billing",    label: "Billing",           icon: CreditCard },
+    { id: "support",    label: "Support",           icon: HeadphonesIcon },
+    { id: "accounts",   label: "Live Accounts",     icon: Wallet },
+    { id: "roles",      label: "Roles",             icon: Shield },
   ];
 
   return (
@@ -883,9 +885,13 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 pb-3 pt-3 px-4 text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
-              tab === t.id ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+              tab === t.id
+                ? t.highlight ? "text-emerald-400 border-b-2 border-emerald-400" : "text-primary border-b-2 border-primary"
+                : t.highlight ? "text-emerald-500/70 hover:text-emerald-400" : "text-muted-foreground hover:text-foreground"
             }`}>
-            <t.icon className="w-3.5 h-3.5" />{t.label}
+            <t.icon className={`w-3.5 h-3.5 ${t.highlight && tab !== t.id ? "animate-pulse" : ""}`} />
+            {t.label}
+            {t.highlight && <span className="ml-1 text-[8px] px-1 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black">LIVE</span>}
           </button>
         ))}
       </div>
@@ -896,18 +902,24 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
             {tabs.find(t => t.id === tab)?.label ?? "Overview"}
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {tab === "overview"  && "Full platform overview — companies, users, bots and revenue at a glance."}
-            {tab === "companies" && "Manage all registered companies and their departments."}
-            {tab === "users"     && "All registered platform users."}
-            {tab === "bots"      && "Start, stop, or pause any trading bot across the entire platform."}
-            {tab === "billing"   && "Subscriptions, payment gateway configuration, and transaction history."}
-            {tab === "support"   && "Manage and respond to user support tickets."}
-            {tab === "accounts"  && "Monitor and control all live trading accounts."}
-            {tab === "roles"     && "Platform-wide role and permission management."}
+            {tab === "overview"   && "Full platform overview — companies, users, bots and revenue at a glance."}
+            {tab === "companies"  && "Manage all registered companies and their departments."}
+            {tab === "users"      && "All registered platform users."}
+            {tab === "bots"       && "Start, stop, or pause any trading bot across the entire platform."}
+            {tab === "live-test"  && "Paper trading terminal — test every bot live with real-time prices before deploying to users."}
+            {tab === "billing"    && "Subscriptions, payment gateway configuration, and transaction history."}
+            {tab === "support"    && "Manage and respond to user support tickets."}
+            {tab === "accounts"   && "Monitor and control all live trading accounts."}
+            {tab === "roles"      && "Platform-wide role and permission management."}
           </p>
         </div>
 
         {tab === "overview"  && <OverviewTab stats={stats} companies={companies} users={users} setTab={setTab} />}
+        {tab === "live-test" && (
+          <div className="h-[calc(100vh-200px)] min-h-[600px]">
+            <LiveTradingTerminal />
+          </div>
+        )}
         {tab === "companies" && (
           <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
             <table className="w-full">
