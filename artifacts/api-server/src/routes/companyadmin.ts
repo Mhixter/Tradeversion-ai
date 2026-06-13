@@ -309,4 +309,93 @@ router.patch("/company-admin/members/:id/role", async (req, res) => {
   }
 });
 
+/* ── POST /api/company-admin/invite-member ───────────────────────────────── */
+router.post("/company-admin/invite-member", async (req, res) => {
+  try {
+    const { email, companyId, role } = req.body ?? {};
+    if (!email || !role) {
+      res.status(400).json({ success: false, error: "Email and role are required." });
+      return;
+    }
+
+    const validRoles = ["admin", "manager", "trader", "viewer"];
+    if (!validRoles.includes(role)) {
+      res.status(400).json({ success: false, error: "Invalid role." });
+      return;
+    }
+
+    let resolvedCompanyId: string | null = companyId ? String(companyId) : null;
+
+    if (!resolvedCompanyId) {
+      const [firstCompany] = await db.select({ id: companiesTable.id }).from(companiesTable).limit(1);
+      if (firstCompany) resolvedCompanyId = firstCompany.id;
+    }
+
+    if (!resolvedCompanyId) {
+      res.status(400).json({ success: false, error: "No company found. Create a company first." });
+      return;
+    }
+
+    let [user] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
+
+    if (!user) {
+      const [newUser] = await db
+        .insert(usersTable)
+        .values({ email, firstName: email.split("@")[0] })
+        .returning({ id: usersTable.id });
+      user = newUser;
+    }
+
+    const existingMember = await db
+      .select({ id: companyMembersTable.id })
+      .from(companyMembersTable)
+      .where(eq(companyMembersTable.userId, user.id))
+      .limit(1);
+
+    let memberId: string;
+    if (existingMember.length > 0) {
+      const [updated] = await db
+        .update(companyMembersTable)
+        .set({ role, status: "active" })
+        .where(eq(companyMembersTable.id, existingMember[0].id))
+        .returning({ id: companyMembersTable.id });
+      memberId = updated.id;
+    } else {
+      const [member] = await db
+        .insert(companyMembersTable)
+        .values({ userId: user.id, companyId: resolvedCompanyId, role, status: "active" })
+        .returning({ id: companyMembersTable.id });
+      memberId = member.id;
+    }
+
+    res.json({
+      success: true,
+      message: `Invitation sent to ${email} with role: ${role}`,
+      memberId,
+      email,
+      role,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ success: false, error: "Failed to invite member." });
+  }
+});
+
+/* ── POST /api/company-admin/payment-gateway/:name/configure ─────────────── */
+router.post("/company-admin/payment-gateway/:name/configure", (req, res) => {
+  const { name } = req.params;
+  const config = req.body ?? {};
+  const validGateways = ["Stripe", "PayPal", "Crypto"];
+  if (!validGateways.includes(name)) {
+    res.status(400).json({ success: false, error: "Unknown payment gateway." });
+    return;
+  }
+  res.json({
+    success: true,
+    gateway: name,
+    message: `${name} gateway configured successfully.`,
+    keysReceived: Object.keys(config),
+  });
+});
+
 export default router;

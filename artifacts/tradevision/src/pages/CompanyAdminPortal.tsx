@@ -389,29 +389,128 @@ function BillingTab() {
       </div>
 
       {/* Payment gateway config */}
-      <div className="bg-card border border-border/50 rounded-2xl p-5">
-        <h3 className="text-sm font-bold flex items-center gap-2 mb-4"><Settings className="w-4 h-4 text-primary" />Payment Gateway Configuration</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { name: "Stripe", status: "active",   logo: "S", color: "bg-violet-500" },
-            { name: "PayPal", status: "inactive",  logo: "P", color: "bg-blue-500" },
-            { name: "Crypto", status: "inactive",  logo: "₿", color: "bg-amber-500" },
-          ].map(gw => (
-            <div key={gw.name} className="flex items-center justify-between p-4 bg-accent/30 rounded-xl border border-border/50">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg ${gw.color} flex items-center justify-center text-white text-xs font-bold`}>{gw.logo}</div>
-                <div>
-                  <p className="text-xs font-semibold">{gw.name}</p>
-                  <StatusBadge status={gw.status} />
-                </div>
-              </div>
-              <Button size="sm" variant="ghost" className="text-xs h-7 px-2">
-                {gw.status === "active" ? "Configure" : "Enable"}
-              </Button>
-            </div>
-          ))}
-        </div>
+      <PaymentGatewayConfig />
+    </div>
+  );
+}
+
+/* ── Payment Gateway Config Component ───────────────────────────────────── */
+const GATEWAYS_DEFAULT = [
+  { name: "Stripe", status: "active",   logo: "S", color: "bg-violet-500", fields: [{ key: "publishable_key", label: "Publishable Key", placeholder: "pk_live_..." }, { key: "secret_key", label: "Secret Key", placeholder: "sk_live_..." }, { key: "webhook_secret", label: "Webhook Secret", placeholder: "whsec_..." }] },
+  { name: "PayPal", status: "inactive", logo: "P", color: "bg-blue-500",   fields: [{ key: "client_id", label: "Client ID", placeholder: "AXxx..." }, { key: "client_secret", label: "Client Secret", placeholder: "EXxx..." }] },
+  { name: "Crypto", status: "inactive", logo: "₿", color: "bg-amber-500",  fields: [{ key: "api_key", label: "API Key", placeholder: "Your crypto gateway API key" }, { key: "webhook_url", label: "Webhook URL", placeholder: "https://..." }] },
+];
+
+function PaymentGatewayConfig() {
+  const [gateways, setGateways] = useState(() => {
+    try {
+      const raw = localStorage.getItem("tv_payment_gateways");
+      return raw ? JSON.parse(raw) : GATEWAYS_DEFAULT;
+    } catch { return GATEWAYS_DEFAULT; }
+  });
+  const [configuring, setConfiguring] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const openConfig = (name: string) => {
+    const gw = gateways.find((g: any) => g.name === name);
+    setFormValues(gw?.savedValues ?? {});
+    setConfiguring(name);
+    setSaved(false);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await apiPost(`/company-admin/payment-gateway/${configuring}/configure`, formValues);
+      const updated = gateways.map((g: any) =>
+        g.name === configuring ? { ...g, status: "active", savedValues: formValues } : g
+      );
+      setGateways(updated);
+      localStorage.setItem("tv_payment_gateways", JSON.stringify(updated));
+      setSaved(true);
+      setTimeout(() => setConfiguring(null), 1200);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const activeGw = gateways.find((g: any) => g.name === configuring);
+
+  return (
+    <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-border/50">
+        <h3 className="text-sm font-bold flex items-center gap-2"><Settings className="w-4 h-4 text-primary" />Payment Gateway Configuration</h3>
       </div>
+      <div className="p-5 space-y-3">
+        {gateways.map((gw: any) => (
+          <div key={gw.name} className="flex items-center justify-between p-4 bg-accent/30 rounded-xl border border-border/50">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-lg ${gw.color} flex items-center justify-center text-white text-sm font-bold`}>{gw.logo}</div>
+              <div>
+                <p className="text-xs font-semibold">{gw.name}</p>
+                <StatusBadge status={gw.status} />
+              </div>
+            </div>
+            <button onClick={() => openConfig(gw.name)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 border border-border/60 font-semibold transition-colors">
+              {gw.status === "active" ? "Configure" : "Enable"}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Config modal */}
+      {configuring && activeGw && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-primary via-violet-500 to-purple-600" />
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg ${activeGw.color} flex items-center justify-center text-white text-sm font-bold`}>{activeGw.logo}</div>
+                  <div>
+                    <h3 className="text-sm font-bold">{activeGw.name} Configuration</h3>
+                    <p className="text-[10px] text-muted-foreground">Enter your {activeGw.name} API credentials</p>
+                  </div>
+                </div>
+                <button onClick={() => setConfiguring(null)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <form onSubmit={handleSave} className="space-y-4">
+                {activeGw.fields.map((f: any) => (
+                  <div key={f.key}>
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">{f.label}</label>
+                    <input
+                      type={f.key.includes("secret") || f.key.includes("key") ? "password" : "text"}
+                      value={formValues[f.key] ?? ""}
+                      onChange={e => setFormValues(v => ({ ...v, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      className="w-full bg-accent border border-border/60 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-primary/50 transition-colors" />
+                  </div>
+                ))}
+                <div className="flex justify-end gap-2 pt-1">
+                  <button type="button" onClick={() => setConfiguring(null)}
+                    className="text-xs px-4 py-2.5 rounded-xl border border-border/60 text-muted-foreground hover:text-foreground transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={saving}
+                    className="flex items-center gap-1.5 text-xs px-5 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-lg shadow-primary/20">
+                    {saved
+                      ? <><CheckCircle className="w-3.5 h-3.5" />Saved!</>
+                      : saving
+                        ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</>
+                        : <><Save className="w-3.5 h-3.5" />Save & Enable</>}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -628,10 +727,52 @@ function LiveAccountsTab() {
 function RolesTab() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: "", companyId: "", role: "trader" });
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [editingRole, setEditingRole] = useState<{ id: number; role: string } | null>(null);
 
-  useEffect(() => {
-    apiGet("/company-admin/roles").then(d => { setData(d); setLoading(false); });
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [rolesData, companiesData] = await Promise.all([
+      apiGet("/company-admin/roles"),
+      apiGet("/company-admin/companies"),
+    ]);
+    setData(rolesData);
+    setCompanies(Array.isArray(companiesData) ? companiesData : []);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    setInviteMsg(null);
+    try {
+      const res = await apiPost("/company-admin/invite-member", inviteForm);
+      if (res.success) {
+        setInviteMsg({ ok: true, text: `Invitation sent to ${inviteForm.email} as ${inviteForm.role}.` });
+        setInviteForm({ email: "", companyId: inviteForm.companyId, role: inviteForm.role });
+        load();
+      } else {
+        setInviteMsg({ ok: false, text: res.error ?? "Failed to invite member." });
+      }
+    } catch {
+      setInviteMsg({ ok: false, text: "Connection error." });
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (memberId: number, role: string) => {
+    setEditingRole({ id: memberId, role });
+    await apiPatch(`/company-admin/members/${memberId}/role`, { role });
+    setEditingRole(null);
+    load();
+  };
 
   if (loading || !data) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
@@ -657,6 +798,64 @@ function RolesTab() {
         ))}
       </div>
 
+      {/* Invite Member */}
+      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/50 flex items-center justify-between">
+          <h3 className="text-sm font-bold flex items-center gap-2"><Mail className="w-4 h-4 text-primary" />Invite Team Member</h3>
+          <button onClick={() => { setShowInvite(v => !v); setInviteMsg(null); }}
+            className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+            <PlusCircle className="w-3.5 h-3.5" />{showInvite ? "Cancel" : "Invite Member"}
+          </button>
+        </div>
+        {showInvite && (
+          <form onSubmit={handleInvite} className="p-5 space-y-4">
+            {inviteMsg && (
+              <div className={`flex items-center gap-2 text-xs px-4 py-3 rounded-xl border ${inviteMsg.ok ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
+                {inviteMsg.ok ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                {inviteMsg.text}
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-1">
+                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Email Address *</label>
+                <input type="email" required value={inviteForm.email}
+                  onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="trader@example.com"
+                  className="w-full bg-accent border border-border/60 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-primary/50 transition-colors" />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Company</label>
+                <select value={inviteForm.companyId} onChange={e => setInviteForm(f => ({ ...f, companyId: e.target.value }))}
+                  className="w-full bg-accent border border-border/60 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-primary/50 transition-colors">
+                  <option value="">— Select company —</option>
+                  {companies.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Role *</label>
+                <select required value={inviteForm.role} onChange={e => setInviteForm(f => ({ ...f, role: e.target.value }))}
+                  className="w-full bg-accent border border-border/60 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-primary/50 transition-colors">
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                  <option value="trader">Trader</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={inviteLoading}
+                className="flex items-center gap-1.5 text-xs px-5 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-lg shadow-primary/20">
+                {inviteLoading
+                  ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending…</>
+                  : <><Mail className="w-3.5 h-3.5" />Send Invitation</>}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Role definitions */}
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
@@ -680,7 +879,7 @@ function RolesTab() {
           </div>
         </div>
 
-        {/* Members list */}
+        {/* Members list with editable roles */}
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
           <div className="px-5 py-4 border-b border-border/50">
             <h3 className="text-sm font-bold flex items-center gap-2"><UserCog className="w-4 h-4 text-primary" />Member Roles</h3>
@@ -689,7 +888,7 @@ function RolesTab() {
             <div className="px-5 py-12 text-center text-sm text-muted-foreground">No members found</div>
           ) : (
             <div className="divide-y divide-border/40">
-              {data.members.slice(0, 8).map((m: any) => (
+              {data.members.slice(0, 10).map((m: any) => (
                 <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-accent/20 transition-colors">
                   <div className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-violet-600/10 flex items-center justify-center text-[10px] font-bold text-primary">
@@ -701,9 +900,16 @@ function RolesTab() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full border font-bold ${colorMap[data.roleDefinitions.find((r: any) => r.role === m.role)?.color ?? "gray"] ?? colorMap.gray}`}>
-                      {m.role}
-                    </span>
+                    <select
+                      value={m.role}
+                      disabled={editingRole?.id === m.id}
+                      onChange={e => handleRoleChange(m.id, e.target.value)}
+                      className="bg-accent border border-border/60 rounded-lg px-2 py-1 text-[10px] font-semibold focus:outline-none focus:border-primary/50 transition-colors cursor-pointer">
+                      <option value="admin">Admin</option>
+                      <option value="manager">Manager</option>
+                      <option value="trader">Trader</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
                     <StatusBadge status={m.status} />
                   </div>
                 </div>

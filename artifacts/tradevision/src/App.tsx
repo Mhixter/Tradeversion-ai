@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import { LoginGate } from "@/pages/LoginGate";
 import { useCompanyRole } from "@/hooks/useCompanyRole";
 import { RoleGate } from "@/components/RoleGate";
-import { Layout } from "@/components/layout/Layout";
+
 
 import Dashboard from "@/pages/Dashboard";
 import StrategyBuilder from "@/pages/StrategyBuilder";
@@ -47,11 +47,9 @@ function BillingGated() {
   const { role, isLoading, inCompany } = useCompanyRole();
   if (!inCompany) return <Billing />;
   return (
-    <Layout title="Billing" subtitle="Manage your subscription and payment methods">
-      <RoleGate allowed={["owner"]} currentRole={role} isLoading={isLoading} pageName="Billing">
-        <Billing />
-      </RoleGate>
-    </Layout>
+    <RoleGate allowed={["owner"]} currentRole={role} isLoading={isLoading} pageName="Billing">
+      <Billing />
+    </RoleGate>
   );
 }
 
@@ -60,11 +58,9 @@ function RiskCenterGated() {
   const { role, isLoading, inCompany } = useCompanyRole();
   if (!inCompany) return <RiskCenter />;
   return (
-    <Layout title="Risk Center" subtitle="Manage risk parameters and portfolio protection">
-      <RoleGate allowed={["owner", "admin", "manager"]} currentRole={role} isLoading={isLoading} pageName="Risk Center">
-        <RiskCenter />
-      </RoleGate>
-    </Layout>
+    <RoleGate allowed={["owner", "admin", "manager"]} currentRole={role} isLoading={isLoading} pageName="Risk Center">
+      <RiskCenter />
+    </RoleGate>
   );
 }
 
@@ -73,11 +69,9 @@ function StrategyBuilderGated() {
   const { role, isLoading, inCompany } = useCompanyRole();
   if (!inCompany) return <StrategyBuilder />;
   return (
-    <Layout title="Strategy Builder" subtitle="Build and configure AI trading strategies">
-      <RoleGate allowed={["owner", "admin", "manager", "trader"]} currentRole={role} isLoading={isLoading} pageName="Strategy Builder">
-        <StrategyBuilder />
-      </RoleGate>
-    </Layout>
+    <RoleGate allowed={["owner", "admin", "manager", "trader"]} currentRole={role} isLoading={isLoading} pageName="Strategy Builder">
+      <StrategyBuilder />
+    </RoleGate>
   );
 }
 
@@ -86,11 +80,9 @@ function BotManagerGated() {
   const { role, isLoading, inCompany } = useCompanyRole();
   if (!inCompany) return <BotManager />;
   return (
-    <Layout title="Bot Manager" subtitle="Deploy and manage your AI trading bots">
-      <RoleGate allowed={["owner", "admin", "manager", "trader"]} currentRole={role} isLoading={isLoading} pageName="Bot Manager">
-        <BotManager />
-      </RoleGate>
-    </Layout>
+    <RoleGate allowed={["owner", "admin", "manager", "trader"]} currentRole={role} isLoading={isLoading} pageName="Bot Manager">
+      <BotManager />
+    </RoleGate>
   );
 }
 
