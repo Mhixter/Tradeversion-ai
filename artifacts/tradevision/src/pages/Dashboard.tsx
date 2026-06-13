@@ -19,9 +19,11 @@ export default function Dashboard() {
 
   const { connected, lastTick } = useWebSocket();
 
-  const liveSummary = lastTick?.summary ?? summary;
-  const liveSignals = lastTick?.signals  ?? signals;
-  const liveBots    = lastTick?.bots.length ? lastTick.bots : activeBots;
+  // Summary comes exclusively from the authenticated REST API (per-user data).
+  // WebSocket only carries market signals — no fake equity/winRate fallbacks.
+  const liveSummary = summary;
+  const liveSignals = lastTick?.signals ?? signals;
+  const liveBots    = activeBots;
 
   const [timeframe, setTimeframe] = useState("1D");
 
