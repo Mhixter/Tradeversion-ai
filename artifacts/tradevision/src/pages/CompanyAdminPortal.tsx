@@ -8,7 +8,7 @@ import {
   Bot, CreditCard, HeadphonesIcon, Wallet, Play, Pause, Square,
   DollarSign, TrendingDown, AlertTriangle, CheckCircle, Clock,
   UserCog, Key, Ban, Zap, MoreVertical, ArrowUpRight, ArrowDownRight,
-  PlusCircle, Settings, ChevronDown,
+  PlusCircle, Settings, ChevronDown, Star, MessageSquare, Trash2, Edit, X, Save,
 } from "lucide-react";
 import { LiveTradingTerminal } from "@/components/admin/LiveTradingTerminal";
 
@@ -16,7 +16,7 @@ const DEFAULT_EMAIL = "saidumuhammed664@gmail.com";
 const DEFAULT_PASS  = "Mhixter664@gmail.com";
 const SESSION_KEY   = "company_admin_session";
 
-type AdminTab = "overview" | "companies" | "users" | "bots" | "live-test" | "billing" | "support" | "accounts" | "roles";
+type AdminTab = "overview" | "companies" | "users" | "bots" | "live-test" | "billing" | "support" | "accounts" | "roles" | "testimonials";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -716,6 +716,220 @@ function RolesTab() {
   );
 }
 
+/* ── Testimonials Tab ────────────────────────────────────────────────────── */
+const TV_TESTIMONIALS_KEY = "tv_testimonials";
+const DEFAULT_TESTIMONIALS_ADMIN = [
+  { id:"1", name:"James K.",  role:"Prop Trader · London",       avatar:"https://i.pravatar.cc/200?img=11", rating:5, text:"TradeVision changed how I operate. My Gold Hunter bot hit +32% in the first quarter while I focused on strategy development. The risk management alone is worth the subscription." },
+  { id:"2", name:"Maria S.",  role:"Retail Investor · New York",  avatar:"https://i.pravatar.cc/200?img=47", rating:5, text:"Copy Trading is unlike anything I've used. I've been mirroring the top-3 performers and averaging +18% monthly. The transparency of each trade is exceptional." },
+  { id:"3", name:"David W.",  role:"Fund Manager · Hong Kong",    avatar:"https://i.pravatar.cc/200?img=12", rating:5, text:"Finally enterprise-grade tools that don't require a 10-person quant team. The multi-broker risk aggregation and portfolio analytics are on par with Bloomberg-level tools." },
+  { id:"4", name:"Aisha R.",  role:"Algorithmic Trader · Dubai",  avatar:"https://i.pravatar.cc/200?img=45", rating:5, text:"The Strategy Builder is remarkable. I built, backtested, and deployed a complete MACD + Bollinger Band system in one afternoon — no code, just nodes." },
+  { id:"5", name:"Lucas M.",  role:"Forex Trader · São Paulo",    avatar:"https://i.pravatar.cc/200?img=15", rating:5, text:"The MT5 integration is seamless. Connected my IC Markets account in 60 seconds. Bots have been running 24/7 for 3 months with zero intervention needed." },
+  { id:"6", name:"Sophie L.", role:"Investment Director · Paris", avatar:"https://i.pravatar.cc/200?img=49", rating:5, text:"We deployed TradeVision across our entire prop desk. The company admin portal and role management is exactly what institutional teams need." },
+];
+
+function loadAdminTestimonials() {
+  try {
+    const raw = localStorage.getItem(TV_TESTIMONIALS_KEY);
+    if (raw) { const p = JSON.parse(raw); if (Array.isArray(p) && p.length > 0) return p; }
+  } catch {}
+  return DEFAULT_TESTIMONIALS_ADMIN;
+}
+
+function saveTestimonials(items: any[]) {
+  localStorage.setItem(TV_TESTIMONIALS_KEY, JSON.stringify(items));
+  window.dispatchEvent(new Event("tv_testimonials_updated"));
+}
+
+const EMPTY_FORM = { name:"", role:"", avatar:"", rating:5, text:"" };
+
+function TestimonialsTab() {
+  const [items, setItems]     = useState<any[]>(loadAdminTestimonials);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm]       = useState<any>(EMPTY_FORM);
+  const [preview, setPreview] = useState<string>("");
+
+  function openAdd() {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    setPreview("");
+  }
+  function openEdit(item: any) {
+    setEditing(item);
+    setForm({ name: item.name, role: item.role, avatar: item.avatar, rating: item.rating, text: item.text });
+    setPreview(item.avatar);
+  }
+  function closeForm() { setEditing(undefined); setForm(EMPTY_FORM); setPreview(""); }
+  function saveForm() {
+    if (!form.name.trim() || !form.text.trim()) return;
+    let updated: any[];
+    if (editing === null) {
+      updated = [...items, { ...form, id: Date.now().toString() }];
+    } else {
+      updated = items.map(it => it.id === editing.id ? { ...it, ...form } : it);
+    }
+    setItems(updated);
+    saveTestimonials(updated);
+    closeForm();
+  }
+  function deleteItem(id: string) {
+    const updated = items.filter(it => it.id !== id);
+    setItems(updated);
+    saveTestimonials(updated);
+  }
+  function moveUp(idx: number) {
+    if (idx === 0) return;
+    const updated = [...items];
+    [updated[idx-1], updated[idx]] = [updated[idx], updated[idx-1]];
+    setItems(updated); saveTestimonials(updated);
+  }
+  function moveDown(idx: number) {
+    if (idx === items.length - 1) return;
+    const updated = [...items];
+    [updated[idx], updated[idx+1]] = [updated[idx+1], updated[idx]];
+    setItems(updated); saveTestimonials(updated);
+  }
+  function resetDefaults() {
+    setItems(DEFAULT_TESTIMONIALS_ADMIN);
+    saveTestimonials(DEFAULT_TESTIMONIALS_ADMIN);
+  }
+
+  const isOpen = editing !== undefined;
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground">Manage testimonials that appear on the public landing page. The first testimonial is shown as the featured large card.</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={resetDefaults} className="text-xs px-3 py-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:border-border transition-colors">Reset to defaults</button>
+          <button onClick={openAdd} className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+            <PlusCircle className="w-3.5 h-3.5" />Add Testimonial
+          </button>
+        </div>
+      </div>
+
+      {/* Add / Edit Form */}
+      {isOpen && (
+        <div className="bg-card border border-primary/30 rounded-2xl p-6 shadow-2xl shadow-primary/5">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-sm font-bold">{editing === null ? "Add New Testimonial" : "Edit Testimonial"}</h3>
+            <button onClick={closeForm} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            {/* Avatar preview + URL */}
+            <div className="sm:col-span-2 flex items-start gap-4">
+              <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-border shrink-0 bg-accent">
+                {preview ? <img src={preview} alt="" className="w-full h-full object-cover" onError={() => setPreview("")} /> : <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No img</div>}
+              </div>
+              <div className="flex-1">
+                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Avatar URL</label>
+                <input value={form.avatar} onChange={e => { setForm((f:any) => ({...f, avatar: e.target.value})); setPreview(e.target.value); }}
+                  placeholder="https://i.pravatar.cc/200?img=1"
+                  className="w-full bg-accent border border-border/60 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors" />
+                <p className="text-[10px] text-muted-foreground mt-1">Tip: use https://i.pravatar.cc/200?img=NUMBER (1–70)</p>
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Name *</label>
+              <input value={form.name} onChange={e => setForm((f:any) => ({...f, name: e.target.value}))}
+                placeholder="James K."
+                className="w-full bg-accent border border-border/60 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors" />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Role &amp; Location</label>
+              <input value={form.role} onChange={e => setForm((f:any) => ({...f, role: e.target.value}))}
+                placeholder="Prop Trader · London"
+                className="w-full bg-accent border border-border/60 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors" />
+            </div>
+            <div>
+              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Star Rating</label>
+              <div className="flex gap-1">
+                {[1,2,3,4,5].map(n => (
+                  <button key={n} onClick={() => setForm((f:any) => ({...f, rating: n}))}
+                    className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${form.rating >= n ? "text-amber-400" : "text-border hover:text-amber-400/50"}`}>
+                    <Star className={`w-4 h-4 ${form.rating >= n ? "fill-amber-400" : ""}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide block mb-1">Testimonial Text *</label>
+              <textarea value={form.text} onChange={e => setForm((f:any) => ({...f, text: e.target.value}))}
+                rows={3} placeholder="Write the testimonial quote here..."
+                className="w-full bg-accent border border-border/60 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors resize-none" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={closeForm} className="text-xs px-4 py-2 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+            <button onClick={saveForm} disabled={!form.name.trim() || !form.text.trim()}
+              className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <Save className="w-3.5 h-3.5" />{editing === null ? "Add Testimonial" : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Testimonials list */}
+      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
+        <div className="border-b border-border/50 bg-accent/30 px-5 py-3 flex items-center gap-2">
+          <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{items.length} Testimonials</span>
+          <span className="text-[10px] text-primary ml-auto">First = Featured on landing page</span>
+        </div>
+        {items.map((t, idx) => (
+          <div key={t.id} className="flex items-start gap-4 px-5 py-4 border-b border-border/30 last:border-0 hover:bg-accent/10 transition-colors group">
+            {/* Position */}
+            <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
+              <button onClick={() => moveUp(idx)} disabled={idx === 0} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
+                <ChevronRight className="w-3 h-3 rotate-[-90deg]" />
+              </button>
+              <span className="text-[10px] font-bold text-muted-foreground w-5 text-center">{idx+1}</span>
+              <button onClick={() => moveDown(idx)} disabled={idx === items.length-1} className="w-5 h-5 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors">
+                <ChevronRight className="w-3 h-3 rotate-90" />
+              </button>
+            </div>
+            {/* Avatar */}
+            <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-border shrink-0 bg-accent">
+              <img src={t.avatar} alt={t.name} className="w-full h-full object-cover"
+                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            </div>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs font-bold">{t.name}</span>
+                {idx === 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-black">FEATURED</span>}
+                <div className="flex gap-0.5 ml-auto">
+                  {Array(t.rating).fill(0).map((_,i) => <Star key={i} className="w-3 h-3 text-amber-400 fill-amber-400" />)}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-1">{t.role}</p>
+              <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">"{t.text}"</p>
+            </div>
+            {/* Actions */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button onClick={() => openEdit(t)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                <Edit className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => deleteItem(t.id)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <div className="px-5 py-12 text-center">
+            <MessageSquare className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">No testimonials yet</p>
+            <button onClick={openAdd} className="mt-3 text-xs text-primary hover:underline">Add the first one</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Overview Tab ────────────────────────────────────────────────────────── */
 function OverviewTab({ stats, companies, users, setTab }: { stats: any; companies: any[]; users: any[]; setTab: (t: AdminTab) => void }) {
   return (
@@ -841,15 +1055,16 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
   useEffect(() => { reload(); }, [reload]);
 
   const tabs: { id: AdminTab; label: string; icon: React.ElementType; highlight?: boolean }[] = [
-    { id: "overview",   label: "Overview",         icon: BarChart2 },
-    { id: "companies",  label: "Companies",         icon: Building2 },
-    { id: "users",      label: "Users",             icon: Users },
-    { id: "bots",       label: "Bot Control",       icon: Bot },
-    { id: "live-test",  label: "Live Test Trading", icon: Zap, highlight: true },
-    { id: "billing",    label: "Billing",           icon: CreditCard },
-    { id: "support",    label: "Support",           icon: HeadphonesIcon },
-    { id: "accounts",   label: "Live Accounts",     icon: Wallet },
-    { id: "roles",      label: "Roles",             icon: Shield },
+    { id: "overview",      label: "Overview",         icon: BarChart2 },
+    { id: "companies",     label: "Companies",         icon: Building2 },
+    { id: "users",         label: "Users",             icon: Users },
+    { id: "bots",          label: "Bot Control",       icon: Bot },
+    { id: "live-test",     label: "Live Test Trading", icon: Zap, highlight: true },
+    { id: "billing",       label: "Billing",           icon: CreditCard },
+    { id: "support",       label: "Support",           icon: HeadphonesIcon },
+    { id: "accounts",      label: "Live Accounts",     icon: Wallet },
+    { id: "roles",         label: "Roles",             icon: Shield },
+    { id: "testimonials",  label: "Testimonials",      icon: MessageSquare },
   ];
 
   return (
@@ -909,8 +1124,9 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
             {tab === "live-test"  && "Paper trading terminal — test every bot live with real-time prices before deploying to users."}
             {tab === "billing"    && "Subscriptions, payment gateway configuration, and transaction history."}
             {tab === "support"    && "Manage and respond to user support tickets."}
-            {tab === "accounts"   && "Monitor and control all live trading accounts."}
-            {tab === "roles"      && "Platform-wide role and permission management."}
+            {tab === "accounts"      && "Monitor and control all live trading accounts."}
+            {tab === "roles"         && "Platform-wide role and permission management."}
+            {tab === "testimonials"  && "Add, edit, reorder and delete testimonials shown on the public landing page."}
           </p>
         </div>
 
@@ -999,11 +1215,12 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
             </table>
           </div>
         )}
-        {tab === "bots"     && <BotsTab />}
-        {tab === "billing"  && <BillingTab />}
-        {tab === "support"  && <SupportTab />}
-        {tab === "accounts" && <LiveAccountsTab />}
-        {tab === "roles"    && <RolesTab />}
+        {tab === "bots"         && <BotsTab />}
+        {tab === "billing"      && <BillingTab />}
+        {tab === "support"      && <SupportTab />}
+        {tab === "accounts"     && <LiveAccountsTab />}
+        {tab === "roles"        && <RolesTab />}
+        {tab === "testimonials" && <TestimonialsTab />}
       </div>
     </div>
   );

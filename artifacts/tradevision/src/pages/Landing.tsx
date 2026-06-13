@@ -510,16 +510,41 @@ function HowItWorks() {
 }
 
 /* ── Testimonials ──────────────────────────────────────────────────────────── */
-const TESTIMONIALS = [
-  { name:"James K.",   role:"Prop Trader · London",       avatar:"https://api.dicebear.com/8.x/avataaars/svg?seed=james",  rating:5, text:"TradeVision changed how I operate. My Gold Hunter bot hit +32% in the first quarter while I focused on strategy development. The risk management alone is worth the subscription." },
-  { name:"Maria S.",   role:"Retail Investor · New York",  avatar:"https://api.dicebear.com/8.x/avataaars/svg?seed=maria",  rating:5, text:"Copy Trading is unlike anything I've used. I've been mirroring the top-3 performers and averaging +18% monthly. The transparency of each trade is exceptional." },
-  { name:"David W.",   role:"Fund Manager · Hong Kong",    avatar:"https://api.dicebear.com/8.x/avataaars/svg?seed=david",  rating:5, text:"Finally enterprise-grade tools that don't require a 10-person quant team. The multi-broker risk aggregation and portfolio analytics are on par with Bloomberg-level tools." },
-  { name:"Aisha R.",   role:"Algorithmic Trader · Dubai",  avatar:"https://api.dicebear.com/8.x/avataaars/svg?seed=aisha",  rating:5, text:"The Strategy Builder is remarkable. I built, backtested, and deployed a complete MACD + Bollinger Band system in one afternoon — no code, just nodes." },
-  { name:"Lucas M.",   role:"Forex Trader · São Paulo",    avatar:"https://api.dicebear.com/8.x/avataaars/svg?seed=lucas",  rating:5, text:"The MT5 integration is seamless. Connected my IC Markets account in 60 seconds. Bots have been running 24/7 for 3 months with zero intervention needed." },
-  { name:"Sophie L.",  role:"Investment Director · Paris", avatar:"https://api.dicebear.com/8.x/avataaars/svg?seed=sophie", rating:5, text:"We deployed TradeVision across our entire prop desk. The company admin portal and role management is exactly what institutional teams need." },
+const DEFAULT_TESTIMONIALS = [
+  { id:"1", name:"James K.",   role:"Prop Trader · London",       avatar:"https://i.pravatar.cc/200?img=11", rating:5, text:"TradeVision changed how I operate. My Gold Hunter bot hit +32% in the first quarter while I focused on strategy development. The risk management alone is worth the subscription." },
+  { id:"2", name:"Maria S.",   role:"Retail Investor · New York",  avatar:"https://i.pravatar.cc/200?img=47", rating:5, text:"Copy Trading is unlike anything I've used. I've been mirroring the top-3 performers and averaging +18% monthly. The transparency of each trade is exceptional." },
+  { id:"3", name:"David W.",   role:"Fund Manager · Hong Kong",    avatar:"https://i.pravatar.cc/200?img=12", rating:5, text:"Finally enterprise-grade tools that don't require a 10-person quant team. The multi-broker risk aggregation and portfolio analytics are on par with Bloomberg-level tools." },
+  { id:"4", name:"Aisha R.",   role:"Algorithmic Trader · Dubai",  avatar:"https://i.pravatar.cc/200?img=45", rating:5, text:"The Strategy Builder is remarkable. I built, backtested, and deployed a complete MACD + Bollinger Band system in one afternoon — no code, just nodes." },
+  { id:"5", name:"Lucas M.",   role:"Forex Trader · São Paulo",    avatar:"https://i.pravatar.cc/200?img=15", rating:5, text:"The MT5 integration is seamless. Connected my IC Markets account in 60 seconds. Bots have been running 24/7 for 3 months with zero intervention needed." },
+  { id:"6", name:"Sophie L.",  role:"Investment Director · Paris", avatar:"https://i.pravatar.cc/200?img=49", rating:5, text:"We deployed TradeVision across our entire prop desk. The company admin portal and role management is exactly what institutional teams need." },
 ];
 
+export const TV_TESTIMONIALS_KEY = "tv_testimonials";
+
+function loadTestimonials() {
+  try {
+    const raw = localStorage.getItem(TV_TESTIMONIALS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return DEFAULT_TESTIMONIALS;
+}
+
 function Testimonials() {
+  const [items, setItems] = React.useState(loadTestimonials);
+
+  /* Re-sync if admin updated them while the tab was open */
+  React.useEffect(() => {
+    const handler = () => setItems(loadTestimonials());
+    window.addEventListener("tv_testimonials_updated", handler);
+    return () => window.removeEventListener("tv_testimonials_updated", handler);
+  }, []);
+
+  const featured = items[0];
+  const rest     = items.slice(1);
+
   return (
     <section className="py-24 bg-accent/15 border-y border-border/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -529,20 +554,60 @@ function Testimonials() {
           </div>
           <h2 className="text-3xl sm:text-5xl font-black mb-4">Trusted by <span className="text-primary">50,000+ Traders</span></h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {TESTIMONIALS.map(t => (
-            <div key={t.name} className="bg-card border border-border/50 rounded-2xl p-6 flex flex-col hover:border-primary/30 transition-all hover:-translate-y-0.5 hover:shadow-xl">
-              <div className="flex mb-4">
-                {Array(t.rating).fill(0).map((_, i) => <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />)}
+
+        {/* Featured testimonial — horizontal, full-width */}
+        {featured && (
+          <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/8 to-violet-600/5 p-8 sm:p-10 mb-6 flex flex-col sm:flex-row items-center gap-8 shadow-2xl shadow-primary/5">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+            {/* Large avatar */}
+            <div className="relative shrink-0">
+              <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl overflow-hidden border-4 border-primary/30 shadow-2xl shadow-primary/20 ring-4 ring-primary/10">
+                <img src={featured.avatar} alt={featured.name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/8.x/initials/svg?seed=${featured.name}`; }} />
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed flex-1 mb-5">"{t.text}"</p>
-              <div className="flex items-center gap-3 pt-4 border-t border-border/40">
-                <img src={t.avatar} alt={t.name} className="w-9 h-9 rounded-full border-2 border-border object-cover bg-accent" />
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                <Star className="w-4 h-4 text-white fill-white" />
+              </div>
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <div className="text-5xl text-primary/30 font-serif leading-none mb-2 select-none">"</div>
+              <p className="text-base sm:text-lg text-foreground/90 font-medium leading-relaxed mb-5 italic">
+                {featured.text}
+              </p>
+              <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start">
                 <div>
-                  <p className="text-sm font-bold">{t.name}</p>
-                  <p className="text-[11px] text-muted-foreground">{t.role}</p>
+                  <p className="text-base font-black">{featured.name}</p>
+                  <p className="text-xs text-muted-foreground">{featured.role}</p>
+                </div>
+                <div className="flex gap-0.5 ml-1">
+                  {Array(featured.rating).fill(0).map((_, i) => <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />)}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rest of testimonials — grid with large avatars */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {rest.map(t => (
+            <div key={t.id} className="group bg-card border border-border/50 rounded-2xl p-6 flex flex-col hover:border-primary/30 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/5">
+              {/* Large avatar at top */}
+              <div className="flex flex-col items-center mb-5">
+                <div className="relative mb-3">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden border-3 border-border group-hover:border-primary/40 transition-colors shadow-xl">
+                    <img src={t.avatar} alt={t.name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/8.x/initials/svg?seed=${t.name}`; }} />
+                  </div>
+                  <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-card border-2 border-border flex items-center justify-center">
+                    <span className="text-[9px]">✓</span>
+                  </div>
+                </div>
+                <p className="text-sm font-black">{t.name}</p>
+                <p className="text-[11px] text-muted-foreground">{t.role}</p>
+                <div className="flex gap-0.5 mt-2">
+                  {Array(t.rating).fill(0).map((_, i) => <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />)}
+                </div>
+              </div>
+              <div className="text-3xl text-primary/20 font-serif leading-none mb-2 select-none">"</div>
+              <p className="text-sm text-muted-foreground leading-relaxed flex-1 italic">{t.text}</p>
             </div>
           ))}
         </div>
