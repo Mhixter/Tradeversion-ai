@@ -474,52 +474,284 @@ function APIManagementSection() {
   );
 }
 
-function ConnectionsSection() {
-  const connections = [
-    { name: "MT5 IC Markets", type: "MT5 Broker", status: "Connected", account: "#12345678", equity: "$82,540" },
-    { name: "MT5 Exness", type: "MT5 Broker", status: "Connected", account: "#87654321", equity: "$65,430" },
-    { name: "MT4 Deriv", type: "MT4 Broker", status: "Connected", account: "#11223344", equity: "$34,680" },
-    { name: "Binance (Spot)", type: "Crypto Exchange", status: "Connected", account: "#44332211", equity: "$24,970" },
-    { name: "Interactive Brokers", type: "Stock Broker", status: "Connected", account: "#99887766", equity: "$8,301" },
-    { name: "Bybit", type: "Crypto Exchange", status: "Not Connected", account: "—", equity: "—" },
-  ];
+const BROKER_SERVERS: Record<string, { mt4: string; mt5: string }> = {
+  "IC Markets":           { mt4: "ICMarkets-Demo",      mt5: "ICMarketsSC-Demo" },
+  "Exness":               { mt4: "Exness-Trial",         mt5: "ExnessUS-Trial" },
+  "Deriv":                { mt4: "Deriv-Demo",           mt5: "Deriv-Demo" },
+  "FXTM":                 { mt4: "FXTM-Demo",            mt5: "FXTM-MT5-Demo" },
+  "Pepperstone":          { mt4: "Pepperstone-Demo",     mt5: "Pepperstone-Demo" },
+  "XM":                   { mt4: "XM.COM-Demo 2",        mt5: "XM Global Ltd" },
+  "OctaFX":               { mt4: "OctaFX-Demo",          mt5: "OctaFX-MT5Demo" },
+  "FBS":                  { mt4: "FBS-Demo",             mt5: "FBS-MT5-Demo" },
+  "Alpari":               { mt4: "AlpariUK-Demo",        mt5: "Alpari-MT5-Demo" },
+  "OANDA":                { mt4: "OANDA-fxTrade Practice", mt5: "OANDA Global-MT5" },
+};
+
+function AddConnectionModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [platform, setPlatform] = useState<"MT5" | "MT4">("MT5");
+  const [broker, setBroker] = useState("IC Markets");
+  const [server, setServer] = useState(BROKER_SERVERS["IC Markets"].mt5);
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"idle" | "ok" | "fail">("idle");
+  const { toast } = useToast();
+
+  const updateServer = (b: string, p: "MT4" | "MT5") => {
+    const s = BROKER_SERVERS[b];
+    if (s) setServer(p === "MT5" ? s.mt5 : s.mt4);
+  };
+
+  const handleBroker = (v: string) => { setBroker(v); updateServer(v, platform); };
+  const handlePlatform = (v: "MT4" | "MT5") => { setPlatform(v); updateServer(broker, v); };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult("idle");
+    await new Promise(r => setTimeout(r, 1800));
+    setTesting(false);
+    setTestResult("ok");
+    toast({ title: "Connection test passed", description: `Successfully reached ${broker} ${platform} server.` });
+  };
+
+  const handleConnect = async () => {
+    setTesting(true);
+    await new Promise(r => setTimeout(r, 1200));
+    setTesting(false);
+    toast({ title: "Broker connected", description: `${broker} ${platform} account #${login} is now linked.` });
+    onClose();
+  };
+
   return (
-    <div className="space-y-5">
-      <Card className="border-border bg-card">
-        <CardHeader className="py-4 border-b border-border/50 flex-row items-center justify-between">
-          <CardTitle className="text-sm">Broker & Exchange Connections</CardTitle>
-          <Button size="sm" className="bg-primary hover:bg-primary/90 h-8" data-testid="button-add-connection">
-            <Plus className="w-3.5 h-3.5 mr-1.5" />Add Connection
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          {connections.map((c, i) => (
-            <div key={i} className="flex items-center justify-between gap-4 p-4 border-b border-border/40 last:border-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${c.status === "Connected" ? "bg-success" : "bg-muted-foreground"}`} />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.type} · {c.account}</p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-border/50">
+          <div>
+            <h3 className="text-base font-bold">Connect Broker Account</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Link your MT4 / MT5 trading account</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-accent">
+            <AlertTriangle className="w-4 h-4 rotate-0 opacity-0" />
+            <span className="sr-only">Close</span>
+            ✕
+          </button>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 px-5 py-3 bg-accent/30 border-b border-border/50">
+          {[{ n: 1, label: "Platform" }, { n: 2, label: "Broker" }, { n: 3, label: "Credentials" }].map(({ n, label }) => (
+            <React.Fragment key={n}>
+              <div className={`flex items-center gap-1.5 text-xs font-medium ${step >= n ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border ${step > n ? "bg-success border-success text-white" : step === n ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
+                  {step > n ? "✓" : n}
                 </div>
+                <span className="hidden sm:inline">{label}</span>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                {c.equity !== "—" && <span className="text-sm font-medium hidden sm:block">{c.equity}</span>}
-                {c.status === "Connected" ? (
-                  <div className="flex gap-1.5">
-                    <Button variant="outline" size="sm" className="h-7 text-xs" data-testid={`button-manage-conn-${i}`}>Manage</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs text-destructive border-destructive/50 hover:bg-destructive hover:text-white" data-testid={`button-disconnect-${i}`}>Disconnect</Button>
-                  </div>
-                ) : (
-                  <Button size="sm" className="h-7 text-xs bg-primary hover:bg-primary/90" data-testid={`button-connect-${i}`}>
-                    <Wifi className="w-3 h-3 mr-1" />Connect
-                  </Button>
-                )}
+              {n < 3 && <div className={`flex-1 h-px ${step > n ? "bg-success" : "bg-border"}`} />}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <div className="p-5">
+          {step === 1 && (
+            <div className="space-y-4">
+              <p className="text-sm font-medium mb-3">Select trading platform</p>
+              <div className="grid grid-cols-2 gap-3">
+                {(["MT5", "MT4"] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => handlePlatform(p)}
+                    className={`p-4 rounded-xl border-2 transition-all text-left ${platform === p ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                  >
+                    <div className="font-bold text-lg mb-1">{p}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {p === "MT5" ? "MetaTrader 5 — Recommended. Multi-asset, advanced analysis." : "MetaTrader 4 — Forex & CFDs. Widest broker support."}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="bg-accent/50 rounded-xl p-3 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground">How to find your {platform} account:</p>
+                <p>1. Open {platform} on your computer or phone</p>
+                <p>2. Go to <strong>File → Open an Account</strong></p>
+                <p>3. Select your broker and note the <strong>Server name, Login & Password</strong></p>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => setStep(2)} className="bg-primary hover:bg-primary/90">Next: Select Broker →</Button>
               </div>
             </div>
-          ))}
-        </CardContent>
-      </Card>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <p className="text-sm font-medium">Select your broker</p>
+              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+                {Object.keys(BROKER_SERVERS).map(b => (
+                  <button
+                    key={b}
+                    onClick={() => handleBroker(b)}
+                    className={`p-3 rounded-xl border-2 transition-all text-left text-sm font-medium ${broker === b ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50 text-foreground"}`}
+                  >
+                    {b}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Server Address</label>
+                <Input
+                  value={server}
+                  onChange={e => setServer(e.target.value)}
+                  className="h-9 text-sm font-mono"
+                  placeholder="e.g. ICMarketsSC-Demo"
+                />
+                <p className="text-[10px] text-muted-foreground">Auto-filled for known brokers. Edit if using a custom server.</p>
+              </div>
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep(1)}>← Back</Button>
+                <Button onClick={() => setStep(3)} className="bg-primary hover:bg-primary/90" disabled={!server}>Next: Credentials →</Button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <p className="text-sm font-medium">Enter your account credentials</p>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{platform} Login (Account Number)</label>
+                  <Input value={login} onChange={e => setLogin(e.target.value)} placeholder="e.g. 12345678" className="h-9" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Investor/Read-only Password</label>
+                  <div className="relative">
+                    <Input
+                      type={showPass ? "text" : "password"}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Investor password (read-only)"
+                      className="h-9 pr-10"
+                    />
+                    <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPass(!showPass)}>
+                      {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">We recommend the <strong>investor (read-only)</strong> password for monitoring. TradeVision never stores your master password.</p>
+                </div>
+              </div>
+
+              {testResult === "ok" && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/20 text-success text-xs font-medium">
+                  <CheckCircle2 className="w-4 h-4" /> Connection test successful
+                </div>
+              )}
+              {testResult === "fail" && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium">
+                  <AlertTriangle className="w-4 h-4" /> Could not reach server — check credentials
+                </div>
+              )}
+
+              <div className="flex justify-between gap-2">
+                <Button variant="outline" onClick={() => setStep(2)}>← Back</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleTest} disabled={testing || !login || !password}>
+                    {testing ? "Testing…" : "Test Connection"}
+                  </Button>
+                  <Button onClick={handleConnect} className="bg-primary hover:bg-primary/90" disabled={testing || !login || !password}>
+                    {testing ? "Connecting…" : "Connect Account"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
+  );
+}
+
+function ConnectionsSection() {
+  const [showModal, setShowModal] = useState(false);
+  const { toast } = useToast();
+  const connections = [
+    { name: "MT5 IC Markets", type: "MT5 Broker", status: "Connected", account: "#12345678", equity: "$82,540", latency: "12ms" },
+    { name: "MT5 Exness", type: "MT5 Broker", status: "Connected", account: "#87654321", equity: "$65,430", latency: "9ms" },
+    { name: "MT4 Deriv", type: "MT4 Broker", status: "Connected", account: "#11223344", equity: "$34,680", latency: "18ms" },
+    { name: "Binance (Spot)", type: "Crypto Exchange", status: "Connected", account: "#44332211", equity: "$24,970", latency: "8ms" },
+    { name: "Interactive Brokers", type: "Stock Broker", status: "Connected", account: "#99887766", equity: "$8,301", latency: "22ms" },
+    { name: "Bybit", type: "Crypto Exchange", status: "Not Connected", account: "—", equity: "—", latency: "—" },
+  ];
+  return (
+    <>
+      {showModal && <AddConnectionModal onClose={() => setShowModal(false)} />}
+      <div className="space-y-5">
+        {/* MT5/MT4 guide */}
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+            </div>
+            <p className="text-sm font-semibold">How to connect MetaTrader 4 / 5</p>
+          </div>
+          <ol className="text-xs text-muted-foreground space-y-1 ml-8 list-decimal">
+            <li>Open your MT4 or MT5 terminal → <strong className="text-foreground">File → Open an Account</strong></li>
+            <li>Note your <strong className="text-foreground">Server name</strong> (e.g. <code className="bg-accent px-1 rounded">ICMarketsSC-Demo</code>)</li>
+            <li>Use your <strong className="text-foreground">account login number</strong> and <strong className="text-foreground">investor (read-only) password</strong></li>
+            <li>Click <strong className="text-foreground">Add Connection</strong> below and follow the steps</li>
+          </ol>
+        </div>
+
+        <Card className="border-border bg-card">
+          <CardHeader className="py-4 border-b border-border/50 flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-sm">Broker & Exchange Connections</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">{connections.filter(c => c.status === "Connected").length} connected · {connections.filter(c => c.status !== "Connected").length} available</p>
+            </div>
+            <Button size="sm" className="bg-primary hover:bg-primary/90 h-8" onClick={() => setShowModal(true)} data-testid="button-add-connection">
+              <Plus className="w-3.5 h-3.5 mr-1.5" />Add Connection
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            {connections.map((c, i) => (
+              <div key={i} className="flex items-center justify-between gap-4 p-4 border-b border-border/40 last:border-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${c.status === "Connected" ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.type} · {c.account}{c.latency !== "—" && <span className="ml-1 text-success">· {c.latency}</span>}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  {c.equity !== "—" && <span className="text-sm font-semibold hidden sm:block">{c.equity}</span>}
+                  {c.status === "Connected" ? (
+                    <div className="flex gap-1.5">
+                      <Button variant="outline" size="sm" className="h-7 text-xs" data-testid={`button-manage-conn-${i}`}>Manage</Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs text-destructive border-destructive/50 hover:bg-destructive hover:text-white"
+                        onClick={() => toast({ title: "Disconnected", description: `${c.name} has been disconnected.` })}
+                        data-testid={`button-disconnect-${i}`}
+                      >Disconnect</Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" className="h-7 text-xs bg-primary hover:bg-primary/90" onClick={() => setShowModal(true)} data-testid={`button-connect-${i}`}>
+                      <Wifi className="w-3 h-3 mr-1" />Connect
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
 

@@ -14,6 +14,139 @@ import {
 
 type NodeType = "data" | "indicator" | "ai" | "signal" | "risk" | "execute";
 
+type ParamDef = { key: string; label: string; type: "number" | "select" | "toggle"; default: string | number | boolean; options?: string[]; description?: string };
+
+const NODE_PARAMS: Record<string, ParamDef[]> = {
+  "RSI (14)": [
+    { key: "period", label: "Period", type: "number", default: 14, description: "Lookback bars" },
+    { key: "source", label: "Source", type: "select", default: "Close", options: ["Close","Open","High","Low","HL/2","HLC/3"] },
+    { key: "overbought", label: "Overbought Level", type: "number", default: 70 },
+    { key: "oversold", label: "Oversold Level", type: "number", default: 30 },
+  ],
+  "MACD": [
+    { key: "fast", label: "Fast EMA", type: "number", default: 12 },
+    { key: "slow", label: "Slow EMA", type: "number", default: 26 },
+    { key: "signal", label: "Signal Period", type: "number", default: 9 },
+    { key: "source", label: "Source", type: "select", default: "Close", options: ["Close","Open","HL/2"] },
+  ],
+  "EMA (21)": [
+    { key: "period", label: "Period", type: "number", default: 21 },
+    { key: "source", label: "Source", type: "select", default: "Close", options: ["Close","Open","High","Low","HL/2"] },
+    { key: "shift", label: "Shift", type: "number", default: 0 },
+  ],
+  "SMA (50)": [
+    { key: "period", label: "Period", type: "number", default: 50 },
+    { key: "source", label: "Source", type: "select", default: "Close", options: ["Close","Open","High","Low","HL/2"] },
+  ],
+  "ATR (14)": [
+    { key: "period", label: "Period", type: "number", default: 14 },
+    { key: "multiplier", label: "Multiplier", type: "number", default: 1.5, description: "Used for dynamic SL/TP" },
+  ],
+  "ADX": [
+    { key: "period", label: "Period", type: "number", default: 14 },
+    { key: "threshold", label: "Trend Threshold", type: "number", default: 25, description: ">25 = trending market" },
+  ],
+  "Bollinger Bands": [
+    { key: "period", label: "Period", type: "number", default: 20 },
+    { key: "stddev", label: "Std Deviation", type: "number", default: 2 },
+    { key: "source", label: "Source", type: "select", default: "Close", options: ["Close","Open","HL/2"] },
+  ],
+  "Stochastic": [
+    { key: "k", label: "%K Period", type: "number", default: 14 },
+    { key: "d", label: "%D Period", type: "number", default: 3 },
+    { key: "smooth", label: "Smooth", type: "number", default: 3 },
+    { key: "overbought", label: "Overbought", type: "number", default: 80 },
+    { key: "oversold", label: "Oversold", type: "number", default: 20 },
+  ],
+  "CCI": [
+    { key: "period", label: "Period", type: "number", default: 14 },
+    { key: "overbought", label: "Overbought", type: "number", default: 100 },
+    { key: "oversold", label: "Oversold", type: "number", default: -100 },
+  ],
+  "Volume": [
+    { key: "ma_period", label: "MA Period", type: "number", default: 20, description: "Volume moving average" },
+    { key: "threshold", label: "Volume Spike (%)", type: "number", default: 150 },
+  ],
+  "AI Trend Predictor": [
+    { key: "confidence", label: "Min Confidence (%)", type: "number", default: 75, description: "Minimum AI confidence to generate signal" },
+    { key: "lookback", label: "Lookback Bars", type: "number", default: 100 },
+    { key: "model", label: "Model", type: "select", default: "GPT-4 Turbo", options: ["GPT-4 Turbo","Claude 3","Gemini Pro"] },
+  ],
+  "Sentiment Analysis": [
+    { key: "sources", label: "News Sources", type: "select", default: "All", options: ["All","Reuters","Bloomberg","Twitter","Forex Factory"] },
+    { key: "lookback_hours", label: "Lookback (hours)", type: "number", default: 6 },
+    { key: "min_score", label: "Min Sentiment Score", type: "number", default: 60 },
+  ],
+  "Volatility Predictor": [
+    { key: "model", label: "Model", type: "select", default: "GARCH", options: ["GARCH","EGARCH","ATR-ML","Neural Net"] },
+    { key: "period", label: "Training Bars", type: "number", default: 200 },
+    { key: "high_vol_threshold", label: "High Vol Threshold", type: "number", default: 80, description: "Percentile cutoff" },
+  ],
+  "Pattern Detector": [
+    { key: "patterns", label: "Pattern Set", type: "select", default: "All Candles", options: ["All Candles","Reversal Only","Continuation Only","Harmonic"] },
+    { key: "min_confidence", label: "Min Match (%)", type: "number", default: 80 },
+  ],
+  "AI Signal Filter": [
+    { key: "filter_mode", label: "Filter Mode", type: "select", default: "Strict", options: ["Strict","Moderate","Loose"] },
+    { key: "max_daily_signals", label: "Max Daily Signals", type: "number", default: 5 },
+  ],
+  "Position Sizer": [
+    { key: "method", label: "Sizing Method", type: "select", default: "Risk %", options: ["Risk %","Fixed Lots","Kelly Criterion","ATR-based"] },
+    { key: "risk_pct", label: "Risk Per Trade (%)", type: "number", default: 2 },
+    { key: "max_lots", label: "Max Lot Size", type: "number", default: 5 },
+  ],
+  "Stop Loss": [
+    { key: "type", label: "Stop Type", type: "select", default: "Fixed Pips", options: ["Fixed Pips","ATR Multiple","Support/Resistance","Swing High/Low"] },
+    { key: "pips", label: "Distance (Pips)", type: "number", default: 25 },
+    { key: "atr_mult", label: "ATR Multiplier", type: "number", default: 1.5 },
+  ],
+  "Take Profit": [
+    { key: "type", label: "TP Type", type: "select", default: "Fixed Pips", options: ["Fixed Pips","RR Ratio","ATR Multiple","Fibonacci"] },
+    { key: "pips", label: "Distance (Pips)", type: "number", default: 50 },
+    { key: "rr_ratio", label: "R:R Ratio", type: "number", default: 2 },
+  ],
+  "Trailing Stop": [
+    { key: "type", label: "Trail Type", type: "select", default: "ATR", options: ["ATR","Fixed Pips","Parabolic SAR"] },
+    { key: "distance", label: "Trail Distance (Pips)", type: "number", default: 15 },
+    { key: "step", label: "Step Size (Pips)", type: "number", default: 5 },
+  ],
+  "Risk Firewall": [
+    { key: "max_daily_loss", label: "Max Daily Loss (%)", type: "number", default: 3 },
+    { key: "max_open", label: "Max Open Positions", type: "number", default: 5 },
+    { key: "block_news", label: "Block During News", type: "toggle", default: true },
+  ],
+  "Daily Drawdown Guard": [
+    { key: "threshold", label: "Drawdown Limit (%)", type: "number", default: 5 },
+    { key: "action", label: "Action", type: "select", default: "Stop All Bots", options: ["Stop All Bots","Pause Bot","Notify Only"] },
+  ],
+  "Market Order": [
+    { key: "slippage", label: "Max Slippage (Pips)", type: "number", default: 2 },
+    { key: "retry", label: "Retry on Reject", type: "toggle", default: true },
+    { key: "comment", label: "Order Comment", type: "select", default: "TradeVision", options: ["TradeVision","Bot ID","Strategy Name"] },
+  ],
+  "Limit Order": [
+    { key: "offset", label: "Offset (Pips)", type: "number", default: 5, description: "Distance from current price" },
+    { key: "expiry", label: "Expiry (Hours)", type: "number", default: 4 },
+  ],
+  "Stop Order": [
+    { key: "offset", label: "Offset (Pips)", type: "number", default: 3 },
+    { key: "expiry", label: "Expiry (Hours)", type: "number", default: 4 },
+  ],
+  "Market Data": [
+    { key: "symbol", label: "Symbol", type: "select", default: "EURUSD", options: ["EURUSD","XAUUSD","BTCUSD","GBPUSD","USDJPY","NAS100","US500"] },
+    { key: "timeframe", label: "Timeframe", type: "select", default: "H1", options: ["M1","M5","M15","M30","H1","H4","D1"] },
+    { key: "bars", label: "Bars to Load", type: "number", default: 500 },
+  ],
+  "BUY Signal": [
+    { key: "min_strength", label: "Min Signal Strength (%)", type: "number", default: 70 },
+    { key: "session_filter", label: "Session Filter", type: "select", default: "All Sessions", options: ["All Sessions","London","New York","Tokyo","Overlap"] },
+  ],
+  "SELL Signal": [
+    { key: "min_strength", label: "Min Signal Strength (%)", type: "number", default: 70 },
+    { key: "session_filter", label: "Session Filter", type: "select", default: "All Sessions", options: ["All Sessions","London","New York","Tokyo","Overlap"] },
+  ],
+};
+
 interface CanvasNode {
   id: string;
   label: string;
@@ -364,71 +497,268 @@ export default function StrategyBuilder() {
             )}
           </div>
 
-          {/* Settings panel */}
+          {/* Settings / Node Properties panel */}
           <div className="hidden lg:flex w-64 shrink-0 bg-card border border-border rounded-lg flex-col overflow-hidden">
-            <div className="py-2.5 px-3 border-b border-border/50">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Strategy Settings</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Strategy Name</label>
-                <Input value={strategyName} onChange={e => setStrategyName(e.target.value)} className="h-8 text-sm" data-testid="input-settings-name" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Symbol</label>
-                <select
-                  value={symbol}
-                  onChange={e => setSymbol(e.target.value)}
-                  className="w-full bg-accent border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  data-testid="select-settings-symbol"
-                >
-                  {["EURUSD", "GBPUSD", "XAUUSD", "BTCUSD", "USDJPY", "AUDUSD", "NAS100"].map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Timeframe</label>
-                <select
-                  value={timeframe}
-                  onChange={e => setTimeframe(e.target.value)}
-                  className="w-full bg-accent border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  data-testid="select-settings-timeframe"
-                >
-                  {["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1"].map(t => <option key={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Risk Per Trade (%)</label>
-                <Input value={riskPerTrade} onChange={e => setRiskPerTrade(e.target.value)} type="number" className="h-8 text-sm" data-testid="input-risk-per-trade" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Take Profit (Pips)</label>
-                <Input value={takeProfit} onChange={e => setTakeProfit(e.target.value)} type="number" className="h-8 text-sm" data-testid="input-take-profit" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Stop Loss (Pips)</label>
-                <Input value={stopLoss} onChange={e => setStopLoss(e.target.value)} type="number" className="h-8 text-sm" data-testid="input-stop-loss" />
-              </div>
-
-              <div className="pt-2 border-t border-border/50 space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Deploy</p>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Account</label>
-                  <select className="w-full bg-accent border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" data-testid="select-deploy-account">
-                    <option>MT5 IC Markets (#12345678)</option>
-                    <option>MT5 Exness (#87654321)</option>
-                    <option>MT4 Deriv (#11223344)</option>
-                  </select>
-                </div>
-                <Button className="w-full h-8 text-xs bg-primary hover:bg-primary/90" onClick={handleSave} data-testid="button-save-settings">Save Settings</Button>
-                <Button className="w-full h-8 text-xs bg-success/90 hover:bg-success text-white" onClick={handleDeployMT5} disabled={isDeploying} data-testid="button-deploy-settings">
-                  <Rocket className="w-3 h-3 mr-1" />{isDeploying ? "Deploying…" : "Deploy Strategy"}
-                </Button>
-              </div>
-            </div>
+            {selectedNodeId ? (
+              <NodePropertiesPanel
+                node={nodes.find(n => n.id === selectedNodeId)!}
+                nodes={nodes}
+                connections={connections}
+                onDelete={() => deleteNode(selectedNodeId)}
+                onConnect={(from, to) => {
+                  if (!connections.find(([f, t]) => f === from && t === to)) {
+                    setConnections(prev => [...prev, [from, to]]);
+                    toast({ title: "Connected", description: `Linked components in the strategy.` });
+                  }
+                }}
+                onDisconnect={(from, to) => setConnections(prev => prev.filter(([f, t]) => !(f === from && t === to)))}
+              />
+            ) : (
+              <StrategySettingsPanel
+                strategyName={strategyName}
+                setStrategyName={setStrategyName}
+                symbol={symbol}
+                setSymbol={setSymbol}
+                timeframe={timeframe}
+                setTimeframe={setTimeframe}
+                riskPerTrade={riskPerTrade}
+                setRiskPerTrade={setRiskPerTrade}
+                takeProfit={takeProfit}
+                setTakeProfit={setTakeProfit}
+                stopLoss={stopLoss}
+                setStopLoss={setStopLoss}
+                isSaving={isSaving}
+                isDeploying={isDeploying}
+                onSave={handleSave}
+                onDeploy={handleDeployMT5}
+              />
+            )}
           </div>
         </div>
       </div>
     </Layout>
+  );
+}
+
+// ─── Node Properties Panel ────────────────────────────────────────────────────
+function NodePropertiesPanel({
+  node, nodes, connections, onDelete, onConnect, onDisconnect,
+}: {
+  node: CanvasNode;
+  nodes: CanvasNode[];
+  connections: [string, string][];
+  onDelete: () => void;
+  onConnect: (from: string, to: string) => void;
+  onDisconnect: (from: string, to: string) => void;
+}) {
+  const params = NODE_PARAMS[node.label] ?? [];
+  const [paramValues, setParamValues] = useState<Record<string, string | number | boolean>>(() =>
+    Object.fromEntries(params.map(p => [p.key, p.default]))
+  );
+
+  const connectedInputs = connections.filter(([, to]) => to === node.id).map(([from]) => nodes.find(n => n.id === from)?.label ?? from);
+  const connectedOutputs = connections.filter(([from]) => from === node.id).map(([, to]) => nodes.find(n => n.id === to)?.label ?? to);
+  const availableInputs = nodes.filter(n => n.id !== node.id && !connections.find(([, t]) => t === node.id && connections.find(([f]) => f === n.id)));
+
+  const nodeTypeLabel = node.type.charAt(0).toUpperCase() + node.type.slice(1);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className={`py-2.5 px-3 border-b border-border/50 flex items-center justify-between ${NODE_COLORS[node.type]}`}>
+        <div>
+          <span className={`text-[10px] font-semibold uppercase tracking-wider ${NODE_LABEL_COLORS[node.type]}`}>{nodeTypeLabel}</span>
+          <p className="text-xs font-bold text-foreground leading-tight mt-0.5">{node.label}</p>
+        </div>
+        <button
+          onClick={onDelete}
+          className="text-destructive hover:bg-destructive/10 rounded-md p-1 transition-colors"
+          title="Delete node"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {/* Parameters */}
+        {params.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Parameters</p>
+            {params.map(p => (
+              <div key={p.key} className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">{p.label}</label>
+                {p.type === "number" && (
+                  <input
+                    type="number"
+                    value={String(paramValues[p.key] ?? p.default)}
+                    onChange={e => setParamValues(prev => ({ ...prev, [p.key]: e.target.value }))}
+                    className="w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                )}
+                {p.type === "select" && (
+                  <select
+                    value={String(paramValues[p.key] ?? p.default)}
+                    onChange={e => setParamValues(prev => ({ ...prev, [p.key]: e.target.value }))}
+                    className="w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    {p.options?.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                )}
+                {p.type === "toggle" && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(paramValues[p.key] ?? p.default)}
+                      onChange={e => setParamValues(prev => ({ ...prev, [p.key]: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-muted-foreground">{Boolean(paramValues[p.key] ?? p.default) ? "Enabled" : "Disabled"}</span>
+                  </div>
+                )}
+                {p.description && <p className="text-[10px] text-muted-foreground/60">{p.description}</p>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground text-center py-3">No configurable parameters</div>
+        )}
+
+        {/* Connected Inputs */}
+        <div className="space-y-2 pt-1 border-t border-border/50">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Inputs ({connectedInputs.length})</p>
+          {connectedInputs.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground/60">No inputs connected</p>
+          ) : (
+            connectedInputs.map((label, i) => {
+              const srcNode = nodes.find(n => n.label === label)!;
+              return (
+                <div key={i} className="flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${NODE_LABEL_COLORS[srcNode?.type ?? "data"].replace("text-", "bg-")}`} />
+                    <span className="text-foreground font-medium">{label}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (srcNode) onDisconnect(srcNode.id, node.id);
+                    }}
+                    className="text-[10px] text-destructive/70 hover:text-destructive"
+                  >✕</button>
+                </div>
+              );
+            })
+          )}
+
+          {/* Add input connection */}
+          {availableInputs.length > 0 && (
+            <select
+              className="w-full bg-background border border-border rounded-md px-2 py-1 text-[10px] text-muted-foreground"
+              value=""
+              onChange={e => { if (e.target.value) onConnect(e.target.value, node.id); }}
+            >
+              <option value="">+ Connect input…</option>
+              {availableInputs.map(n => (
+                <option key={n.id} value={n.id}>{n.label}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Connected Outputs */}
+        <div className="space-y-2 pt-1 border-t border-border/50">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Outputs ({connectedOutputs.length})</p>
+          {connectedOutputs.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground/60">No outputs connected</p>
+          ) : (
+            connectedOutputs.map((label, i) => {
+              const tgtNode = nodes.find(n => n.label === label)!;
+              return (
+                <div key={i} className="flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${NODE_LABEL_COLORS[tgtNode?.type ?? "data"].replace("text-", "bg-")}`} />
+                    <span className="text-foreground font-medium">{label}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (tgtNode) onDisconnect(node.id, tgtNode.id);
+                    }}
+                    className="text-[10px] text-destructive/70 hover:text-destructive"
+                  >✕</button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div className="p-3 border-t border-border/50">
+        <button
+          className="w-full text-[10px] text-muted-foreground text-center hover:text-foreground py-1"
+          onClick={() => {}}
+        >
+          Click canvas to deselect
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Strategy Settings Panel (shown when no node selected) ────────────────────
+function StrategySettingsPanel({
+  strategyName, setStrategyName, symbol, setSymbol, timeframe, setTimeframe,
+  riskPerTrade, setRiskPerTrade, takeProfit, setTakeProfit, stopLoss, setStopLoss,
+  isSaving, isDeploying, onSave, onDeploy,
+}: any) {
+  return (
+    <>
+      <div className="py-2.5 px-3 border-b border-border/50">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Strategy Settings</span>
+        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Click a node to configure it</p>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Strategy Name</label>
+          <Input value={strategyName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStrategyName(e.target.value)} className="h-8 text-sm" data-testid="input-settings-name" />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Symbol</label>
+          <select value={symbol} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSymbol(e.target.value)} className="w-full bg-accent border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" data-testid="select-settings-symbol">
+            {["EURUSD", "GBPUSD", "XAUUSD", "BTCUSD", "USDJPY", "AUDUSD", "NAS100"].map(s => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Timeframe</label>
+          <select value={timeframe} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTimeframe(e.target.value)} className="w-full bg-accent border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" data-testid="select-settings-timeframe">
+            {["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1"].map(t => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Risk Per Trade (%)</label>
+          <Input value={riskPerTrade} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRiskPerTrade(e.target.value)} type="number" className="h-8 text-sm" data-testid="input-risk-per-trade" />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Take Profit (Pips)</label>
+          <Input value={takeProfit} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTakeProfit(e.target.value)} type="number" className="h-8 text-sm" data-testid="input-take-profit" />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Stop Loss (Pips)</label>
+          <Input value={stopLoss} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStopLoss(e.target.value)} type="number" className="h-8 text-sm" data-testid="input-stop-loss" />
+        </div>
+        <div className="pt-2 border-t border-border/50 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Deploy</p>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Account</label>
+            <select className="w-full bg-accent border border-border rounded-md px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary" data-testid="select-deploy-account">
+              <option>MT5 IC Markets (#12345678)</option>
+              <option>MT5 Exness (#87654321)</option>
+              <option>MT4 Deriv (#11223344)</option>
+            </select>
+          </div>
+          <Button className="w-full h-8 text-xs bg-primary hover:bg-primary/90" onClick={onSave} data-testid="button-save-settings">Save Settings</Button>
+          <Button className="w-full h-8 text-xs bg-success/90 hover:bg-success text-white" onClick={onDeploy} disabled={isDeploying} data-testid="button-deploy-settings">
+            <Rocket className="w-3 h-3 mr-1" />{isDeploying ? "Deploying…" : "Deploy Strategy"}
+          </Button>
+        </div>
+      </div>
+    </>
   );
 }
 
