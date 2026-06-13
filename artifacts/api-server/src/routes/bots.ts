@@ -172,20 +172,15 @@ router.post("/bots/:id/pause", async (req, res) => {
   }
 });
 
-// GET /api/bots/:id/signal — Generate real-time strategy signal
+// GET /api/bots/:id/signal — Generate real-time strategy signal (works for RUNNING and preview)
 router.get("/bots/:id/signal", async (req, res) => {
   try {
     const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
-    if (bot.status !== "RUNNING") {
-      res.json({ action: "HOLD", reason: "Bot is not running", confidence: 0, stopLoss: 0, takeProfit: 0 });
-      return;
-    }
-    // Use strategy template lookup
     const templateId = STRATEGY_TEMPLATES.find(t => t.name === bot.strategy)?.id || "sma_crossover";
     const atrValue = parseFloat(bot.market === "Crypto" ? "250" : bot.market === "Gold" ? "8" : "0.0012");
     const signal = generateSignal(templateId, bot.market, atrValue);
-    res.json({ ...signal, botId: bot.id, botName: bot.name, market: bot.market });
+    res.json({ ...signal, botId: bot.id, botName: bot.name, market: bot.market, status: bot.status });
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });
@@ -197,7 +192,6 @@ router.post("/bots/:id/execute", async (req, res) => {
   try {
     const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
-    if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     // Require at least one configured broker with equity
     const brokers = await db.select().from(brokersTable);

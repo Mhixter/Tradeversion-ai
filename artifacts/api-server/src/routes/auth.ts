@@ -3,6 +3,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
 import { GetCurrentAuthUserResponse } from "@workspace/api-zod";
 import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import {
   clearSession,
   getOidcConfig,
@@ -75,21 +76,50 @@ async function upsertUser(claims: Record<string, unknown>) {
       | null,
   };
 
-  const [user] = await db
-    .insert(usersTable)
-    .values(userData)
-    .onConflictDoUpdate({
-      target: usersTable.id,
-      set: {
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        profileImageUrl: userData.profileImageUrl,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
-  return user;
+  try {
+    const [user] = await db
+      .insert(usersTable)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: usersTable.id,
+        set: {
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  } catch (e: any) {
+    // Handle unique email constraint violation — a row exists with the same
+    // email but a different id (e.g. stale UUID row). Find it by email and
+    // overwrite the id so this Replit user is canonical.
+    const isUniqueViolation =
+      e?.code === "23505" || e?.message?.includes("unique");
+    if (isUniqueViolation && userData.email) {
+      const [existing] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, userData.email));
+      if (existing) {
+        const [updated] = await db
+          .update(usersTable)
+          .set({
+            id: userData.id,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
+            updatedAt: new Date(),
+          })
+          .where(eq(usersTable.email, userData.email))
+          .returning();
+        return updated;
+      }
+    }
+    throw e;
+  }
 }
 
 router.get("/auth/user", (req: Request, res: Response) => {

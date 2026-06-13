@@ -192,7 +192,7 @@ function BotsTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setBots(await apiGet("/company-admin/bots")); } finally { setLoading(false); }
+    try { const d = await apiGet("/company-admin/bots"); setBots(Array.isArray(d) ? d : []); } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);

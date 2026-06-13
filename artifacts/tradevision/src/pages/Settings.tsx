@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useConnectBroker, useGetBrokers } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Settings as SettingsIcon, User, Shield, Sliders, TrendingUp, Bell,
   Key, Link as LinkIcon, Database, CreditCard, Copy, Trash2, Plus,
@@ -498,6 +500,8 @@ function AddConnectionModal({ onClose }: { onClose: () => void }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"idle" | "ok" | "fail">("idle");
   const { toast } = useToast();
+  const connectBroker = useConnectBroker();
+  const qc = useQueryClient();
 
   const updateServer = (b: string, p: "MT4" | "MT5") => {
     const s = BROKER_SERVERS[b];
@@ -518,10 +522,18 @@ function AddConnectionModal({ onClose }: { onClose: () => void }) {
 
   const handleConnect = async () => {
     setTesting(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setTesting(false);
-    toast({ title: "Broker connected", description: `${broker} ${platform} account #${login} is now linked.` });
-    onClose();
+    try {
+      await connectBroker.mutateAsync({
+        data: { broker, platform, server, login, password } as any,
+      });
+      qc.invalidateQueries({ queryKey: ["/api/brokers"] });
+      toast({ title: "Broker connected", description: `${broker} ${platform} account #${login} is now linked.` });
+      onClose();
+    } catch {
+      toast({ title: "Failed to connect broker", description: "Please check your details and try again.", variant: "destructive" });
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (
