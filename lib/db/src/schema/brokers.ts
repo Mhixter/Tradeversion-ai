@@ -1,9 +1,10 @@
-import { pgTable, text, serial, timestamp, numeric, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, numeric, boolean, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const brokersTable = pgTable("brokers", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }),
   broker: text("broker").notNull(),
   platform: text("platform").notNull(),
   accountNumber: text("account_number").notNull(),

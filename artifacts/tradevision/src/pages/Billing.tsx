@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   CreditCard, Check, Zap, Building2, Users, Bot, Crown,
   ArrowRight, Shield, RefreshCw, ChevronDown, ChevronUp,
-  BadgeCheck, AlertTriangle, Clock, Star,
+  BadgeCheck, AlertTriangle, Clock, Star, Receipt,
 } from "lucide-react";
 
 type PlanId = "free" | "starter" | "pro" | "enterprise";
@@ -45,11 +45,11 @@ const PLAN_COLORS: Record<PlanId, string> = {
 };
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
-  active:    { icon: BadgeCheck,   color: "text-emerald-500", label: "Active" },
-  trialing:  { icon: Clock,        color: "text-blue-500",    label: "Free Trial" },
-  past_due:  { icon: AlertTriangle, color: "text-amber-500",  label: "Past Due" },
-  canceled:  { icon: RefreshCw,    color: "text-red-500",     label: "Canceled" },
-  paused:    { icon: Clock,        color: "text-gray-500",    label: "Paused" },
+  active:    { icon: BadgeCheck,    color: "text-emerald-500", label: "Active" },
+  trialing:  { icon: Clock,         color: "text-blue-500",    label: "Free Trial" },
+  past_due:  { icon: AlertTriangle, color: "text-amber-500",   label: "Past Due" },
+  canceled:  { icon: RefreshCw,     color: "text-red-500",     label: "Canceled" },
+  paused:    { icon: Clock,         color: "text-gray-500",    label: "Paused" },
 };
 
 function PlanCard({ plan, current, cycle, onSelect, loading }: {
@@ -178,16 +178,6 @@ export default function Billing() {
 
   const StatusIcon = sub ? STATUS_CONFIG[sub.status]?.icon : null;
 
-  // Invoice mock history
-  const invoices = [
-    { id: "INV-2026-006", date: "Jun 1, 2026", amount: 149, status: "paid", plan: "Pro" },
-    { id: "INV-2026-005", date: "May 1, 2026", amount: 149, status: "paid", plan: "Pro" },
-    { id: "INV-2026-004", date: "Apr 1, 2026", amount: 149, status: "paid", plan: "Pro" },
-    { id: "INV-2026-003", date: "Mar 1, 2026", amount: 49,  status: "paid", plan: "Starter" },
-    { id: "INV-2026-002", date: "Feb 1, 2026", amount: 49,  status: "paid", plan: "Starter" },
-    { id: "INV-2026-001", date: "Jan 1, 2026", amount: 49,  status: "paid", plan: "Starter" },
-  ];
-
   return (
     <Layout>
       <div className="p-4 lg:p-6 space-y-6">
@@ -223,7 +213,7 @@ export default function Billing() {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {sub.status === "trialing"
-                        ? `Free trial · Renews ${sub.trialEndsAt ? new Date(sub.trialEndsAt).toLocaleDateString() : "soon"}`
+                        ? `Free trial · Ends ${sub.trialEndsAt ? new Date(sub.trialEndsAt).toLocaleDateString() : "soon"}`
                         : sub.amountCents > 0
                         ? `$${(sub.amountCents / 100).toFixed(0)}/${sub.billingCycle === "annual" ? "yr" : "mo"} · Next billing ${sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString() : "N/A"}`
                         : "Free plan"}
@@ -231,9 +221,6 @@ export default function Billing() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <CreditCard className="w-3.5 h-3.5 mr-1.5" />Manage Payment
-                  </Button>
                   {sub.status !== "canceled" && sub.plan !== "free" && (
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
                       Cancel Plan
@@ -311,16 +298,16 @@ export default function Billing() {
                 </thead>
                 <tbody>
                   {[
-                    ["Trading Bots",         "1",      "3",      "Unlimited",  "Unlimited"],
-                    ["Strategies",          "1",      "5",      "Unlimited",  "Unlimited"],
-                    ["Copy Traders",         "0",      "3",      "20",         "Unlimited"],
-                    ["AI Signals (GPT-4)",   "✗",     "Basic",  "✓",          "✓"],
-                    ["Backtesting",         "✗",      "30 days","Full suite", "Full suite"],
-                    ["Risk Dashboard",       "Basic",  "Basic",  "Advanced",   "Custom"],
-                    ["API Access",           "✗",      "✗",      "✓",          "✓"],
-                    ["Company Management",   "✗",      "✗",      "✓",          "✓"],
-                    ["SLA Guarantee",        "✗",      "✗",      "✗",          "99.9%"],
-                    ["Dedicated Support",    "✗",      "Email",  "Priority",   "Dedicated"],
+                    ["Trading Bots",        "1",      "3",       "Unlimited",  "Unlimited"],
+                    ["Strategies",          "1",      "5",       "Unlimited",  "Unlimited"],
+                    ["Copy Traders",        "0",      "3",       "20",         "Unlimited"],
+                    ["AI Signals (GPT-4)",  "✗",      "Basic",   "✓",          "✓"],
+                    ["Backtesting",         "✗",      "30 days", "Full suite", "Full suite"],
+                    ["Risk Dashboard",      "Basic",  "Basic",   "Advanced",   "Custom"],
+                    ["API Access",          "✗",      "✗",       "✓",          "✓"],
+                    ["Company Management",  "✗",      "✗",       "✓",          "✓"],
+                    ["SLA Guarantee",       "✗",      "✗",       "✗",          "99.9%"],
+                    ["Dedicated Support",   "✗",      "Email",   "Priority",   "Dedicated"],
                   ].map(([feature, ...vals]) => (
                     <tr key={feature} className="border-b border-border/50 last:border-0">
                       <td className="py-2.5 pr-4 text-foreground font-medium">{feature}</td>
@@ -347,18 +334,28 @@ export default function Billing() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-7 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center">
-                  <span className="text-white text-[10px] font-bold">VISA</span>
+            {sub && sub.plan !== "free" && sub.status !== "trialing" ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">•••• •••• •••• 4242</p>
-                  <p className="text-xs text-muted-foreground">Expires 12/28</p>
+                  <p className="text-sm font-medium text-foreground">No payment method on file</p>
+                  <p className="text-xs text-muted-foreground mt-1">Add a payment method to keep your subscription active after the trial ends.</p>
                 </div>
+                <Button variant="outline" size="sm">
+                  <CreditCard className="w-3.5 h-3.5 mr-1.5" />Add Payment Method
+                </Button>
               </div>
-              <Button variant="outline" size="sm">Update</Button>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium text-foreground">No payment method required</p>
+                <p className="text-xs text-muted-foreground">Payment details will be collected when you upgrade to a paid plan.</p>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1.5">
               <Shield className="w-3 h-3" />
               Payments are secured by Stripe. We never store your card details.
@@ -381,22 +378,14 @@ export default function Billing() {
           </CardHeader>
           {showHistory && (
             <CardContent>
-              <div className="space-y-2">
-                {invoices.map(inv => (
-                  <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{inv.id}</p>
-                        <p className="text-xs text-muted-foreground">{inv.date} · {inv.plan} Plan</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-foreground">${inv.amount}</span>
-                      <Button variant="ghost" size="sm" className="text-xs h-7">Download</Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                  <Receipt className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">No invoices yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Your billing history will appear here once you have an active paid subscription.</p>
+                </div>
               </div>
             </CardContent>
           )}

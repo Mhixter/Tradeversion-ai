@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, GitBranch, Bot, Store, LineChart, Users,
   PieChart, ShieldAlert, Bell, Settings, Moon, Sun, X,
-  Diamond, Building2, CreditCard, Shield, LogOut, Crown,
+  Diamond, Building2, CreditCard, Shield, LogOut, Crown, UserCog,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: "Notifications",   href: "/notifications",    icon: Bell,            show: true, badge: 8 },
     { name: "KYC",             href: "/kyc",              icon: Shield,          show: true },
     { name: "Billing",         href: "/billing",          icon: CreditCard,      show: canViewBilling || !inCompany },
+    { name: "Team",            href: "/team-management",  icon: UserCog,         show: true },
     { name: "Settings",        href: "/settings",         icon: Settings,        show: true },
   ].filter(i => i.show);
 

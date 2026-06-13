@@ -154,11 +154,11 @@ export default function Dashboard() {
                 <div className="w-full flex justify-between text-sm mb-3">
                   <div className="flex flex-col">
                     <span className="text-muted-foreground text-xs">Daily Drawdown</span>
-                    <span className="font-semibold text-foreground tabular-nums">{(liveSummary?.maxDrawdown ?? summary?.maxDrawdown ?? 4.12).toFixed(2)}%</span>
+                    <span className="font-semibold text-foreground tabular-nums">{(liveSummary?.maxDrawdown ?? summary?.maxDrawdown ?? 0).toFixed(2)}%</span>
                   </div>
                   <div className="flex flex-col text-right">
                     <span className="text-muted-foreground text-xs">Risk/Reward</span>
-                    <span className="font-semibold text-foreground tabular-nums">{(liveSummary?.sharpeRatio ?? summary?.sharpeRatio ?? 2.14).toFixed(2)}</span>
+                    <span className="font-semibold text-foreground tabular-nums">{(liveSummary?.sharpeRatio ?? summary?.sharpeRatio ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-center gap-2 mt-1">

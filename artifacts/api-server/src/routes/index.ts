@@ -23,6 +23,7 @@ import executionsRouter from "./executions";
 import analyticsRouter from "./analytics";
 import emergencyRouter from "./emergency";
 import riskEngineRouter from "./riskengine";
+import staffRouter from "./staff";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(executionsRouter);
 router.use(analyticsRouter);
 router.use(emergencyRouter);
 router.use(riskEngineRouter);
+router.use(staffRouter);
 
 export default router;

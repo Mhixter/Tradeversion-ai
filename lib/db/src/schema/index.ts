@@ -15,3 +15,4 @@ export * from "./executions";
 export * from "./riskProfiles";
 export * from "./activityLogs";
 export * from "./performanceSnapshots";
+export * from "./staff";

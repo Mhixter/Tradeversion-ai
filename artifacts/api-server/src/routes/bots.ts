@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, botsTable, brokersTable, tradesTable } from "@workspace/db";
-import { eq, desc, gte } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { generateSignal, STRATEGY_TEMPLATES } from "../lib/strategyEngine";
 
 const router = Router();
@@ -14,9 +14,14 @@ const mapBot = (b: typeof botsTable.$inferSelect) => ({
   winRate: parseFloat(b.winRate), isAI: b.isAI,
 });
 
+function uid(req: any) { return req.isAuthenticated() ? req.user.id : null; }
+
 router.get("/bots", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const bots = await db.select().from(botsTable).orderBy(botsTable.sortOrder);
+    const bots = await db.select().from(botsTable)
+      .where(eq(botsTable.userId, uid(req)))
+      .orderBy(botsTable.sortOrder);
     res.json(bots.map(mapBot));
   } catch (e) {
     req.log.error(e);
@@ -25,10 +30,12 @@ router.get("/bots", async (req, res) => {
 });
 
 router.post("/bots", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const { name, strategy, account, market, timeframe, strategyTemplateId, isAI } = req.body;
     const template = STRATEGY_TEMPLATES.find(t => t.id === strategyTemplateId);
     const [inserted] = await db.insert(botsTable).values({
+      userId: uid(req),
       name,
       strategy: strategy || template?.name || "Custom",
       strategyType: template?.type || strategy || "Custom",
@@ -51,12 +58,13 @@ router.post("/bots", async (req, res) => {
 });
 
 router.get("/bots/stats", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const bots = await db.select().from(botsTable);
+    const bots = await db.select().from(botsTable).where(eq(botsTable.userId, uid(req)));
     const running = bots.filter(b => b.status === "RUNNING").length;
     const stopped = bots.filter(b => b.status === "STOPPED").length;
-    const paused = bots.filter(b => b.status === "PAUSED").length;
-    const error = bots.filter(b => b.status === "ERROR").length;
+    const paused  = bots.filter(b => b.status === "PAUSED").length;
+    const error   = bots.filter(b => b.status === "ERROR").length;
     const totalProfit = bots.reduce((s, b) => s + parseFloat(b.pnlAllTime), 0);
     const winRates = bots.filter(b => parseFloat(b.winRate) > 0).map(b => parseFloat(b.winRate));
     const avgWinRate = winRates.length ? winRates.reduce((a, b) => a + b, 0) / winRates.length : 0;
@@ -77,8 +85,11 @@ router.get("/bots/stats", async (req, res) => {
 });
 
 router.get("/bots/top-performing", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const bots = await db.select().from(botsTable).orderBy(desc(botsTable.pnlAllTime)).limit(5);
+    const bots = await db.select().from(botsTable)
+      .where(eq(botsTable.userId, uid(req)))
+      .orderBy(desc(botsTable.pnlAllTime)).limit(5);
     res.json(bots.map(b => ({
       id: b.id, name: b.name, totalProfit: parseFloat(b.pnlAllTime),
       profitPercent: parseFloat(b.pnlAllTimePercent), winRate: parseFloat(b.winRate),
@@ -90,8 +101,10 @@ router.get("/bots/top-performing", async (req, res) => {
 });
 
 router.get("/bots/:id", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
+    const [bot] = await db.select().from(botsTable)
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))));
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
     res.json(mapBot(bot));
   } catch (e) {
@@ -101,6 +114,7 @@ router.get("/bots/:id", async (req, res) => {
 });
 
 router.patch("/bots/:id", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const { name, strategy, account, market, timeframe } = req.body;
     const update: Partial<typeof botsTable.$inferInsert> = {};
@@ -109,7 +123,10 @@ router.patch("/bots/:id", async (req, res) => {
     if (account) update.account = account;
     if (market) update.market = market;
     if (timeframe) update.timeframe = timeframe;
-    const [updated] = await db.update(botsTable).set(update).where(eq(botsTable.id, parseInt(req.params.id))).returning();
+    const [updated] = await db.update(botsTable).set(update)
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Bot not found" }); return; }
     res.json(mapBot(updated));
   } catch (e) {
     req.log.error(e);
@@ -118,8 +135,10 @@ router.patch("/bots/:id", async (req, res) => {
 });
 
 router.delete("/bots/:id", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    await db.delete(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
+    await db.delete(botsTable)
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))));
     res.status(204).send();
   } catch (e) {
     req.log.error(e);
@@ -127,13 +146,12 @@ router.delete("/bots/:id", async (req, res) => {
   }
 });
 
-// ─── Bot control ─────────────────────────────────────────────────────────────
-
 router.post("/bots/:id/start", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [bot] = await db.update(botsTable)
       .set({ status: "RUNNING" })
-      .where(eq(botsTable.id, parseInt(req.params.id)))
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))))
       .returning();
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
     req.log.info({ botId: bot.id, name: bot.name }, "Bot started");
@@ -145,10 +163,11 @@ router.post("/bots/:id/start", async (req, res) => {
 });
 
 router.post("/bots/:id/stop", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [bot] = await db.update(botsTable)
       .set({ status: "STOPPED" })
-      .where(eq(botsTable.id, parseInt(req.params.id)))
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))))
       .returning();
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
     res.json({ success: true, status: "STOPPED", bot: mapBot(bot) });
@@ -159,10 +178,11 @@ router.post("/bots/:id/stop", async (req, res) => {
 });
 
 router.post("/bots/:id/pause", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const [bot] = await db.update(botsTable)
       .set({ status: "PAUSED" })
-      .where(eq(botsTable.id, parseInt(req.params.id)))
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))))
       .returning();
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
     res.json({ success: true, status: "PAUSED", bot: mapBot(bot) });
@@ -172,10 +192,11 @@ router.post("/bots/:id/pause", async (req, res) => {
   }
 });
 
-// GET /api/bots/:id/signal — Generate real-time strategy signal (works for RUNNING and preview)
 router.get("/bots/:id/signal", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
+    const [bot] = await db.select().from(botsTable)
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))));
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
     const templateId = STRATEGY_TEMPLATES.find(t => t.name === bot.strategy)?.id || "sma_crossover";
     const atrValue = parseFloat(bot.market === "Crypto" ? "250" : bot.market === "Gold" ? "8" : "0.0012");
@@ -187,14 +208,14 @@ router.get("/bots/:id/signal", async (req, res) => {
   }
 });
 
-// POST /api/bots/:id/execute — Execute a trade based on strategy signal
 router.post("/bots/:id/execute", async (req, res) => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const [bot] = await db.select().from(botsTable).where(eq(botsTable.id, parseInt(req.params.id)));
+    const [bot] = await db.select().from(botsTable)
+      .where(and(eq(botsTable.id, parseInt(req.params.id)), eq(botsTable.userId, uid(req))));
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
 
-    // Require at least one configured broker with equity
-    const brokers = await db.select().from(brokersTable);
+    const brokers = await db.select().from(brokersTable).where(eq(brokersTable.userId, uid(req)));
     const activeBroker = brokers.find(b => parseFloat(b.equity) > 0) || brokers[0];
     if (!activeBroker) {
       res.status(400).json({ error: "No broker configured. Please connect a broker account first." });
@@ -207,47 +228,33 @@ router.post("/bots/:id/execute", async (req, res) => {
     }
 
     const { action, size, symbol } = req.body;
-    if (!["BUY","SELL"].includes(action)) {
-      res.status(400).json({ error: "Invalid action" });
-      return;
-    }
+    if (!["BUY","SELL"].includes(action)) { res.status(400).json({ error: "Invalid action" }); return; }
 
     const tradeSymbol = symbol || bot.market;
-
-    // Use provided price or realistic market price based on symbol
     const basePrice = parseFloat(req.body.price || "0") || (
       tradeSymbol?.includes("XAU") ? 2340 :
       tradeSymbol?.includes("BTC") ? 67500 :
       tradeSymbol?.includes("ETH") ? 3500 :
       tradeSymbol?.includes("JPY") ? 156.0 :
-      tradeSymbol?.includes("GBP") ? 1.265 :
-      1.0850
+      tradeSymbol?.includes("GBP") ? 1.265 : 1.0850
     );
 
     const slippage = basePrice * 0.00005 * (Math.random() - 0.5);
     const finalPrice = basePrice + slippage;
-
-    // Default size = 1% of equity in lots (minimum 0.01)
     const tradeSize = parseFloat(String(size)) || Math.max(0.01, parseFloat((brokerEquity * 0.01 / (basePrice * 100000)).toFixed(2)));
-
-    // Simulate P&L for the trade (small random profit/loss)
     const pipValue = tradeSymbol?.includes("JPY") ? 0.01 : 0.0001;
     const pips = (Math.random() - 0.45) * 20;
     const tradeProfit = parseFloat((pips * pipValue * tradeSize * 100000).toFixed(2));
 
-    // Store trade in DB
     const now = new Date();
     await db.insert(tradesTable).values({
-      symbol:     tradeSymbol,
-      type:       action,
-      size:       String(tradeSize),
-      profit:     String(tradeProfit),
-      time:       now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      symbol: tradeSymbol, type: action,
+      size: String(tradeSize), profit: String(tradeProfit),
+      time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
       entryPrice: String(Math.round(finalPrice * 100000) / 100000),
-      exitPrice:  null,
+      exitPrice: null,
     });
 
-    // Update bot PnL
     const newPnlToday = parseFloat(bot.pnlToday) + tradeProfit;
     const newPnlAllTime = parseFloat(bot.pnlAllTime) + tradeProfit;
     await db.update(botsTable).set({
@@ -255,7 +262,6 @@ router.post("/bots/:id/execute", async (req, res) => {
       pnlAllTime: String(newPnlAllTime),
     }).where(eq(botsTable.id, bot.id));
 
-    // Update broker equity
     const newEquity = brokerEquity + tradeProfit;
     const newProfit = parseFloat(activeBroker.profit) + tradeProfit;
     const balance = parseFloat(activeBroker.balance);
@@ -266,14 +272,10 @@ router.post("/bots/:id/execute", async (req, res) => {
       profitPercent: String(Math.round(newProfitPercent * 100) / 100),
     }).where(eq(brokersTable.id, activeBroker.id));
 
-    req.log.info({ botId: bot.id, action, symbol: tradeSymbol, size: tradeSize, price: finalPrice, profit: tradeProfit }, "Trade executed");
-
     res.json({
       success: true,
       orderId: `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-      action,
-      symbol: tradeSymbol,
-      size: tradeSize,
+      action, symbol: tradeSymbol, size: tradeSize,
       executionPrice: Math.round(finalPrice * 100000) / 100000,
       slippage: Math.round(Math.abs(slippage) * 100000) / 100000,
       executionTime: Math.round(12 + Math.random() * 38),

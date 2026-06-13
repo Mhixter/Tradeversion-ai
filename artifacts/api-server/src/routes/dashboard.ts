@@ -1,15 +1,25 @@
 import { Router } from "express";
 import { db, botsTable, brokersTable, tradesTable, performanceSnapshotsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { generateSignal, STRATEGY_TEMPLATES } from "../lib/strategyEngine";
 
 const router = Router();
 
+function requireAuth(req: any, res: any): boolean {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return false;
+  }
+  return true;
+}
+
 router.get("/dashboard/summary", async (req, res) => {
+  if (!requireAuth(req, res)) return;
   try {
+    const uid = req.user.id;
     const [brokers, bots, snapshots] = await Promise.all([
-      db.select().from(brokersTable),
-      db.select().from(botsTable),
+      db.select().from(brokersTable).where(eq(brokersTable.userId, uid)),
+      db.select().from(botsTable).where(eq(botsTable.userId, uid)),
       db.select().from(performanceSnapshotsTable).orderBy(desc(performanceSnapshotsTable.snapshotDate)).limit(30),
     ]);
 
@@ -53,35 +63,14 @@ router.get("/dashboard/summary", async (req, res) => {
 });
 
 router.get("/dashboard/equity-curve", async (req, res) => {
+  if (!requireAuth(req, res)) return;
   try {
     const { getSnapshots, buildEquityCurve } = await import("../lib/analyticsEngine");
     const snapshots = await getSnapshots(31);
     if (snapshots.length >= 5) {
       return res.json(buildEquityCurve(snapshots));
     }
-
-    const brokers = await db.select().from(brokersTable);
-    const totalEquity = brokers.reduce((s, b) => s + parseFloat(b.equity), 0);
-
-    if (totalEquity === 0) {
-      return res.json([]);
-    }
-
-    const points = [];
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
-
-    for (let i = 0; i < 31; i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      const equity = i === 30 ? totalEquity : totalEquity;
-      points.push({
-        date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        equity: Math.round(equity),
-        buyHold: Math.round(equity),
-      });
-    }
-    res.json(points);
+    return res.json([]);
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Internal server error" });
@@ -89,6 +78,7 @@ router.get("/dashboard/equity-curve", async (req, res) => {
 });
 
 router.get("/dashboard/recent-trades", async (req, res) => {
+  if (!requireAuth(req, res)) return;
   try {
     const trades = await db.select().from(tradesTable).orderBy(desc(tradesTable.createdAt)).limit(10);
     res.json(trades.map(t => ({
@@ -137,8 +127,12 @@ router.get("/dashboard/signals", async (req, res) => {
 });
 
 router.get("/dashboard/active-bots", async (req, res) => {
+  if (!requireAuth(req, res)) return;
   try {
-    const bots = await db.select().from(botsTable).where(eq(botsTable.status, "RUNNING")).limit(5);
+    const uid = req.user.id;
+    const bots = await db.select().from(botsTable)
+      .where(and(eq(botsTable.userId, uid), eq(botsTable.status, "RUNNING")))
+      .limit(5);
     res.json(bots.map(b => ({
       id: b.id, name: b.name, strategy: b.strategy, symbol: b.market,
       status: b.status, pnlToday: parseFloat(b.pnlToday), pnlAllTime: parseFloat(b.pnlAllTime),
@@ -150,8 +144,10 @@ router.get("/dashboard/active-bots", async (req, res) => {
 });
 
 router.get("/dashboard/connected-accounts", async (req, res) => {
+  if (!requireAuth(req, res)) return;
   try {
-    const brokers = await db.select().from(brokersTable).limit(5);
+    const uid = req.user.id;
+    const brokers = await db.select().from(brokersTable).where(eq(brokersTable.userId, uid)).limit(5);
     res.json(brokers.map(b => ({
       id: b.id, broker: b.broker, platform: b.platform, accountNumber: b.accountNumber,
       equity: parseFloat(b.equity), balance: parseFloat(b.balance), profit: parseFloat(b.profit),

@@ -1,6 +1,8 @@
 /**
  * AnalyticsEngine — daily PnL snapshots, Sharpe, Sortino, recovery factor.
  * Snapshots are stored in performance_snapshots table once per day.
+ * NOTE: Auto-seeding is intentionally disabled — snapshots are only written
+ * when real broker/trading data exists.
  */
 
 import { db, performanceSnapshotsTable } from "@workspace/db";
@@ -105,34 +107,3 @@ export function buildEquityCurve(snapshots: typeof performanceSnapshotsTable.$in
     dailyPnl:  parseFloat(String(s.dailyPnl)),
   }));
 }
-
-/* Auto-snapshot every 24 hours */
-async function dailySnapshotJob() {
-  try {
-    const returns = Array.from({ length: 30 }, () => (Math.random() - 0.3) * 0.015);
-    const wins    = returns.filter(r => r > 0).map(r => r * 100_000);
-    const losses  = returns.filter(r => r < 0).map(r => r * 100_000);
-    await takeSnapshot(null, {
-      date:           new Date().toISOString().slice(0, 10),
-      equity:         250_000 + (Math.random() - 0.3) * 5000,
-      balance:        245_000,
-      dailyPnl:       (Math.random() - 0.3) * 2500,
-      weeklyPnl:      (Math.random() - 0.2) * 8000,
-      monthlyPnl:     (Math.random() + 0.2) * 18000,
-      winRate:        68 + Math.random() * 15,
-      avgWin:         145 + Math.random() * 80,
-      avgLoss:        -(55 + Math.random() * 30),
-      profitFactor:   calcProfitFactor(wins, losses),
-      sharpeRatio:    calcSharpe(returns),
-      sortinoRatio:   calcSortino(returns),
-      recoveryFactor: calcRecoveryFactor(18_000, 4_200),
-      maxDrawdown:    3.5 + Math.random() * 2,
-      totalTrades:    126,
-      openTrades:     3,
-    });
-  } catch {}
-}
-
-/* Run once at startup and then every 24h */
-dailySnapshotJob();
-setInterval(dailySnapshotJob, 24 * 60 * 60 * 1000);

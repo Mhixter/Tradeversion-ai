@@ -23,6 +23,7 @@ import Account from "@/pages/Account";
 import CompanyManagement from "@/pages/CompanyManagement";
 import KYC from "@/pages/KYC";
 import Billing from "@/pages/Billing";
+import TeamManagement from "@/pages/TeamManagement";
 import Landing from "@/pages/Landing";
 import Signup from "@/pages/Signup";
 import CompanyAdminPortal from "@/pages/CompanyAdminPortal";
@@ -109,6 +110,7 @@ function AuthedRouter() {
       <Route path="/company" component={CompanyManagement} />
       <Route path="/kyc" component={KYC} />
       <Route path="/billing" component={BillingGated} />
+      <Route path="/team-management" component={TeamManagement} />
       {/* Public pages also accessible when logged in */}
       <Route path="/landing">{() => <Landing />}</Route>
       <Route path="/faq" component={FAQPage} />

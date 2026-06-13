@@ -1,9 +1,10 @@
-import { pgTable, text, serial, timestamp, numeric, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, numeric, boolean, integer, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const botsTable = pgTable("bots", {
   id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 }),
   name: text("name").notNull(),
   strategy: text("strategy").notNull(),
   strategyType: text("strategy_type").notNull().default("Scalping"),
