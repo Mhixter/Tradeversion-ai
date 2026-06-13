@@ -2,7 +2,7 @@
  * Production seed: professional bots and strategies
  * Run: pnpm --filter @workspace/scripts run seed:prod
  */
-import { db, botsTable, strategiesTable } from "@workspace/db";
+import { db, botsTable, strategiesTable, brokersTable } from "@workspace/db";
 
 const BOTS = [
   { name: "Gold Hunter AI", strategy: "AI Sentiment Trader", strategyType: "AI/ML", account: "Live MT5 #1", accountNumber: "12847392", market: "Gold", timeframe: "H1", status: "RUNNING", pnlToday: "342.80", pnlTodayPercent: "2.14", pnlAllTime: "6840.20", pnlAllTimePercent: "22.13", winRate: "76.8", isAI: true, sortOrder: 1 },
@@ -28,6 +28,14 @@ const STRATEGIES = [
   { name: "Multi-TF Confluence", status: "TESTING", market: "Forex", symbol: "EURUSD", timeframe: "H1", description: "Three-timeframe alignment strategy requiring D1+H4+H1 agreement before entry.", riskPerTrade: "1", takeProfit: "60", stopLoss: "25", trailingStop: "15", magicNumber: "10006" },
 ];
 
+const BROKERS = [
+  { broker: "IC Markets", platform: "MT5", server: "ICMarkets-Live01", accountNumber: "12847392", equity: "85450.75", balance: "82000.00", profit: "3450.75", profitPercent: "4.21", usedMargin: "18200.00", status: "LIVE", isConnected: true },
+  { broker: "Exness", platform: "MT5", server: "Exness-Real3", accountNumber: "29381047", equity: "62340.00", balance: "59500.00", profit: "2840.00", profitPercent: "4.77", usedMargin: "12100.00", status: "LIVE", isConnected: true },
+  { broker: "Deriv", platform: "MT4", server: "Deriv-Server", accountNumber: "57821034", equity: "34680.50", balance: "33200.00", profit: "1480.50", profitPercent: "4.46", usedMargin: "8400.00", status: "DEMO", isConnected: true },
+  { broker: "Binance", platform: "Crypto", server: "Binance-Main", accountNumber: "CB-00421", equity: "24870.00", balance: "22000.00", profit: "2870.00", profitPercent: "13.05", usedMargin: "5000.00", status: "LIVE", isConnected: true },
+  { broker: "Interactive Brokers", platform: "Stocks", server: "IBKR-Prod", accountNumber: "IB-94821", equity: "8402.00", balance: "8000.00", profit: "402.00", profitPercent: "5.03", usedMargin: "1800.00", status: "LIVE", isConnected: true },
+];
+
 async function seed() {
   console.log("🌱 Seeding production data...");
 
@@ -47,6 +55,15 @@ async function seed() {
     console.log(`✅ Inserted ${STRATEGIES.length} strategies`);
   } else {
     console.log("⏭  Strategies table already has data — skipping");
+  }
+
+  // Brokers
+  const existingBrokers = await db.select({ id: brokersTable.id }).from(brokersTable).limit(1);
+  if (existingBrokers.length === 0) {
+    await db.insert(brokersTable).values(BROKERS);
+    console.log(`✅ Inserted ${BROKERS.length} brokers`);
+  } else {
+    console.log("⏭  Brokers table already has data — skipping");
   }
 
   console.log("🎉 Done!");

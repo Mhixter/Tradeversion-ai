@@ -1,0 +1,178 @@
+For an AI Trading Platform Landing Page, the header and footer must look like a fintech SaaS product (TradingView, Stripe, Binance, Notion style), not a generic website.
+
+Header Navigation
+[Logo]
+
+Products ▼
+Solutions ▼
+Marketplace ▼
+Resources ▼
+Pricing
+About
+
+-----------------------
+
+Login
+Get Started
+Products Dropdown
+AI Trading Bots
+Strategy Builder
+Copy Trading
+Portfolio Analytics
+Risk Center
+Backtesting
+Broker Integrations
+Execution Engine
+Solutions Dropdown
+Retail Traders
+Professional Traders
+Prop Firms
+Fund Managers
+Trading Teams
+Institutions
+Marketplace Dropdown
+Browse Bots
+Top Performers
+Forex Bots
+Gold Bots
+Crypto Bots
+New Releases
+Become a Creator
+Resources Dropdown
+Documentation
+API Docs
+Help Center
+Trading Academy
+Blog
+Market Insights
+FAQ
+Alternative Enterprise Header
+Logo
+
+Platform
+Marketplace
+Developers
+Enterprise
+Pricing
+Resources
+
+----------------
+
+Sign In
+Book Demo
+Start Free Trial
+Sticky Top Bar
+
+Above Header
+
+🚀 New: Gold Hunter AI achieved 18.4% ROI this quarter.
+
+or
+
+📈 Connect your MT5 account and start automated trading in minutes.
+Footer Structure
+Column 1
+TradeVision AI
+
+Institutional-grade AI trading automation
+for MT4 and MT5 traders.
+
+Social Links
+
+Twitter
+LinkedIn
+Telegram
+Discord
+YouTube
+Column 2
+Platform
+
+Dashboard
+AI Bots
+Strategy Builder
+Backtesting
+Risk Center
+Analytics
+Column 3
+Marketplace
+
+Browse Bots
+Top Strategies
+Become a Creator
+Copy Trading
+Performance Rankings
+Column 4
+Resources
+
+Documentation
+API Documentation
+Help Center
+FAQ
+Blog
+Market Reports
+Column 5
+Company
+
+About
+Careers
+Contact
+Partners
+Affiliates
+Column 6
+Legal
+
+Terms of Service
+Privacy Policy
+Cookie Policy
+Risk Disclosure
+Compliance
+Footer Bottom
+© 2026 TradeVision AI. All rights reserved.
+
+TradeVision AI is a technology platform and is not a broker,
+investment advisor, or financial institution.
+
+Trading involves risk. Past performance does not guarantee
+future results.
+
+Funds remain with connected third-party brokers.
+Professional CTA Before Footer
+Ready to Automate Your Trading?
+
+Connect your broker account,
+deploy AI-powered strategies,
+and trade with institutional-grade tools.
+
+[ Start Free Trial ]    [ Book a Demo ]
+Best Landing Page Structure
+Header
+
+Hero Section
+
+Trusted Brokers
+
+Live Performance
+
+Features
+
+AI Trading Bots
+
+Strategy Builder
+
+Risk Management
+
+Backtesting
+
+Analytics
+
+Broker Integrations
+
+Testimonials
+
+Pricing
+
+FAQ
+
+CTA Section
+
+Footer

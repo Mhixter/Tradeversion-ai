@@ -34,16 +34,30 @@ router.get("/dashboard/summary", async (req, res) => {
 
 router.get("/dashboard/equity-curve", async (req, res) => {
   try {
+    const { getSnapshots, buildEquityCurve } = await import("../lib/analyticsEngine");
+    const snapshots = await getSnapshots(31);
+    if (snapshots.length >= 5) {
+      return res.json(buildEquityCurve(snapshots));
+    }
+
+    const brokers = await db.select().from(brokersTable);
+    const bots = await db.select().from(botsTable);
+    const totalEquity = brokers.reduce((s, b) => s + parseFloat(b.equity), 0) || 100000;
+    const totalPnl = bots.reduce((s, b) => s + parseFloat(b.pnlAllTime), 0);
+
     const points = [];
-    const start = new Date("2024-05-01");
-    let equity = 152640;
-    let buyHold = 140000;
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    const dailyGain = totalPnl / 30;
+    let equity = totalEquity - totalPnl;
+    let buyHold = equity * 0.88;
+
     for (let i = 0; i < 31; i++) {
       const d = new Date(start);
       d.setDate(d.getDate() + i);
-      equity += (Math.random() - 0.35) * 3000;
-      buyHold += (Math.random() - 0.4) * 2000;
-      if (i === 30) equity = 245000;
+      equity += dailyGain + (dailyGain * (Math.sin(i) * 0.2));
+      buyHold += (dailyGain * 0.65) + (dailyGain * (Math.cos(i) * 0.15));
+      if (i === 30) equity = totalEquity;
       points.push({
         date: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
         equity: Math.round(equity),
