@@ -23,16 +23,17 @@ router.get("/trades/analytics", async (req, res) => {
   try {
     const rows = await db.select().from(tradesTable);
     const profitable = rows.filter(t => parseFloat(t.profit) > 0);
-    const losing = rows.filter(t => parseFloat(t.profit) < 0);
+    const losing     = rows.filter(t => parseFloat(t.profit) < 0);
     const totalProfit = rows.reduce((s, t) => s + parseFloat(t.profit), 0);
-    const avgWin = profitable.length ? profitable.reduce((s, t) => s + parseFloat(t.profit), 0) / profitable.length : 45.23;
-    const avgLoss = losing.length ? losing.reduce((s, t) => s + parseFloat(t.profit), 0) / losing.length : -32.11;
+    const avgWin  = profitable.length ? profitable.reduce((s, t) => s + parseFloat(t.profit), 0) / profitable.length : 0;
+    const avgLoss = losing.length     ? losing.reduce((s, t) => s + parseFloat(t.profit), 0) / losing.length : 0;
     res.json({
-      totalTrades: rows.length || 126,
-      winningTrades: profitable.length || 99,
-      losingTrades: losing.length || 27,
-      totalProfit: totalProfit || 12540.75,
-      avgWin, avgLoss,
+      totalTrades:   rows.length,
+      winningTrades: profitable.length,
+      losingTrades:  losing.length,
+      totalProfit:   parseFloat(totalProfit.toFixed(2)),
+      avgWin:        parseFloat(avgWin.toFixed(2)),
+      avgLoss:       parseFloat(avgLoss.toFixed(2)),
     });
   } catch (e) {
     req.log.error(e);

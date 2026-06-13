@@ -41,6 +41,43 @@ router.post("/brokers", async (req, res) => {
   }
 });
 
+/* PATCH /api/brokers/:id — update broker account balance/equity after connection */
+router.patch("/brokers/:id", async (req, res) => {
+  try {
+    const { equity, balance, profit, profitPercent, status, isConnected } = req.body;
+    const update: Partial<typeof brokersTable.$inferInsert> = {};
+    if (equity != null)        update.equity = String(equity);
+    if (balance != null)       update.balance = String(balance);
+    if (profit != null)        update.profit = String(profit);
+    if (profitPercent != null) update.profitPercent = String(profitPercent);
+    if (status)                update.status = status;
+    if (isConnected != null)   update.isConnected = isConnected;
+
+    if (Object.keys(update).length === 0) {
+      res.status(400).json({ error: "No fields to update" });
+      return;
+    }
+
+    const [updated] = await db.update(brokersTable)
+      .set(update)
+      .where(eq(brokersTable.id, parseInt(req.params.id)))
+      .returning();
+
+    if (!updated) { res.status(404).json({ error: "Broker not found" }); return; }
+
+    res.json({
+      id: updated.id, broker: updated.broker, platform: updated.platform,
+      accountNumber: updated.accountNumber,
+      equity: parseFloat(updated.equity), balance: parseFloat(updated.balance),
+      profit: parseFloat(updated.profit), profitPercent: parseFloat(updated.profitPercent),
+      status: updated.status, server: updated.server, isConnected: updated.isConnected,
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/brokers/:id", async (req, res) => {
   try {
     await db.delete(brokersTable).where(eq(brokersTable.id, parseInt(req.params.id)));

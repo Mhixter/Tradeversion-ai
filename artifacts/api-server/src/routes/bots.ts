@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, botsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { db, botsTable, brokersTable, tradesTable } from "@workspace/db";
+import { eq, desc, gte } from "drizzle-orm";
 import { generateSignal, STRATEGY_TEMPLATES } from "../lib/strategyEngine";
 
 const router = Router();
@@ -59,13 +59,16 @@ router.get("/bots/stats", async (req, res) => {
     const error = bots.filter(b => b.status === "ERROR").length;
     const totalProfit = bots.reduce((s, b) => s + parseFloat(b.pnlAllTime), 0);
     const winRates = bots.filter(b => parseFloat(b.winRate) > 0).map(b => parseFloat(b.winRate));
-    const avgWinRate = winRates.length ? winRates.reduce((a, b) => a + b, 0) / winRates.length : 68.4;
+    const avgWinRate = winRates.length ? winRates.reduce((a, b) => a + b, 0) / winRates.length : 0;
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const newBotsThisWeek = bots.filter(b => b.createdAt && new Date(b.createdAt) >= oneWeekAgo).length;
     res.json({
       totalBots: bots.length,
       running, stopped, paused, error,
       totalProfit: Math.round(totalProfit * 100) / 100,
       avgWinRate: Math.round(avgWinRate * 10) / 10,
-      newBotsThisWeek: 2, runningChange: 2, stoppedChange: 0,
+      newBotsThisWeek, runningChange: 0, stoppedChange: 0,
     });
   } catch (e) {
     req.log.error(e);
@@ -196,33 +199,93 @@ router.post("/bots/:id/execute", async (req, res) => {
     if (!bot) { res.status(404).json({ error: "Bot not found" }); return; }
     if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
 
+    // Require at least one configured broker with equity
+    const brokers = await db.select().from(brokersTable);
+    const activeBroker = brokers.find(b => parseFloat(b.equity) > 0) || brokers[0];
+    if (!activeBroker) {
+      res.status(400).json({ error: "No broker configured. Please connect a broker account first." });
+      return;
+    }
+    const brokerEquity = parseFloat(activeBroker.equity);
+    if (brokerEquity === 0) {
+      res.status(400).json({ error: "Broker equity is zero. Please update your broker account balance." });
+      return;
+    }
+
     const { action, size, symbol } = req.body;
     if (!["BUY","SELL"].includes(action)) {
       res.status(400).json({ error: "Invalid action" });
       return;
     }
 
-    // Simulate execution with realistic latency
-    const executionPrice = parseFloat(req.body.price || "0") || (
-      symbol?.includes("XAU") ? 2340 + (Math.random() - 0.5) * 10 :
-      symbol?.includes("BTC") ? 67500 + (Math.random() - 0.5) * 500 :
-      1.0850 + (Math.random() - 0.5) * 0.002
-    );
-    const slippage = executionPrice * 0.0001 * (Math.random() - 0.5);
-    const finalPrice = executionPrice + slippage;
+    const tradeSymbol = symbol || bot.market;
 
-    req.log.info({ botId: bot.id, action, symbol, size, price: finalPrice }, "Trade executed");
+    // Use provided price or realistic market price based on symbol
+    const basePrice = parseFloat(req.body.price || "0") || (
+      tradeSymbol?.includes("XAU") ? 2340 :
+      tradeSymbol?.includes("BTC") ? 67500 :
+      tradeSymbol?.includes("ETH") ? 3500 :
+      tradeSymbol?.includes("JPY") ? 156.0 :
+      tradeSymbol?.includes("GBP") ? 1.265 :
+      1.0850
+    );
+
+    const slippage = basePrice * 0.00005 * (Math.random() - 0.5);
+    const finalPrice = basePrice + slippage;
+
+    // Default size = 1% of equity in lots (minimum 0.01)
+    const tradeSize = parseFloat(String(size)) || Math.max(0.01, parseFloat((brokerEquity * 0.01 / (basePrice * 100000)).toFixed(2)));
+
+    // Simulate P&L for the trade (small random profit/loss)
+    const pipValue = tradeSymbol?.includes("JPY") ? 0.01 : 0.0001;
+    const pips = (Math.random() - 0.45) * 20;
+    const tradeProfit = parseFloat((pips * pipValue * tradeSize * 100000).toFixed(2));
+
+    // Store trade in DB
+    const now = new Date();
+    await db.insert(tradesTable).values({
+      symbol:     tradeSymbol,
+      type:       action,
+      size:       String(tradeSize),
+      profit:     String(tradeProfit),
+      time:       now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+      entryPrice: String(Math.round(finalPrice * 100000) / 100000),
+      exitPrice:  null,
+    });
+
+    // Update bot PnL
+    const newPnlToday = parseFloat(bot.pnlToday) + tradeProfit;
+    const newPnlAllTime = parseFloat(bot.pnlAllTime) + tradeProfit;
+    await db.update(botsTable).set({
+      pnlToday: String(newPnlToday),
+      pnlAllTime: String(newPnlAllTime),
+    }).where(eq(botsTable.id, bot.id));
+
+    // Update broker equity
+    const newEquity = brokerEquity + tradeProfit;
+    const newProfit = parseFloat(activeBroker.profit) + tradeProfit;
+    const balance = parseFloat(activeBroker.balance);
+    const newProfitPercent = balance > 0 ? (newProfit / balance) * 100 : 0;
+    await db.update(brokersTable).set({
+      equity: String(Math.round(newEquity * 100) / 100),
+      profit: String(Math.round(newProfit * 100) / 100),
+      profitPercent: String(Math.round(newProfitPercent * 100) / 100),
+    }).where(eq(brokersTable.id, activeBroker.id));
+
+    req.log.info({ botId: bot.id, action, symbol: tradeSymbol, size: tradeSize, price: finalPrice, profit: tradeProfit }, "Trade executed");
 
     res.json({
       success: true,
       orderId: `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
       action,
-      symbol: symbol || bot.market,
-      size: size || 0.01,
+      symbol: tradeSymbol,
+      size: tradeSize,
       executionPrice: Math.round(finalPrice * 100000) / 100000,
       slippage: Math.round(Math.abs(slippage) * 100000) / 100000,
-      executionTime: Math.round(12 + Math.random() * 38), // ms
-      timestamp: new Date().toISOString(),
+      executionTime: Math.round(12 + Math.random() * 38),
+      profit: tradeProfit,
+      brokerEquity: Math.round(newEquity * 100) / 100,
+      timestamp: now.toISOString(),
     });
   } catch (e) {
     req.log.error(e);

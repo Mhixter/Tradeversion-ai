@@ -3,5 +3,6 @@
 - [TradeVision DB Schema](tradevision-db-schema.md) — company setup is POST /api/company/setup (auto-creates owner member + 3 default departments); members joined via innerJoin with usersTable.
 - [TradeVision Seeding](tradevision-seeding.md) — Production seed script at scripts/src/seed-production.ts; run with pnpm --filter @workspace/scripts run seed:prod; idempotent (skips if table has data).
 - [TradeVision Workflows](tradevision-workflows.md) — Artifact workflows: "artifacts/api-server: API Server" (PORT=8081) and "artifacts/tradevision: web" (dynamic Replit PORT); do NOT hardcode PORT in tradevision dev script.
-- [TradeVision Admin Portal](tradevision-admin.md) — Full admin portal at /company-admin (separate from Replit auth); 8 tabs: overview, companies, users, bots, billing, support, live accounts, roles; admin creds in companyadmin.ts.
+- [TradeVision Admin Portal](tradevision-admin.md) — Full admin portal at /company-admin; 10 tabs; billing/live-accounts now DB-driven; support returns []; invite-member fixed for varchar IDs.
+- [TradeVision Mock Data Policy](tradevision-mock-data-policy.md) — All dashboard/analytics/trades routes return 0/empty (not fakes) when no broker configured; execute requires real broker equity.
 - [Replit Artifact Dynamic Port](replit-artifact-port.md) — Replit artifact workflows inject PORT dynamically; hardcoding PORT in the dev script causes 502. Never override PORT in artifact dev scripts.

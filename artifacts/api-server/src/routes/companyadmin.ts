@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, companiesTable, departmentsTable, companyMembersTable, usersTable, botsTable } from "@workspace/db";
+import { db, companiesTable, departmentsTable, companyMembersTable, usersTable, botsTable, brokersTable, subscriptionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 const router = Router();
@@ -30,7 +30,13 @@ router.get("/company-admin/stats", async (req, res) => {
     const users       = await db.select({ id: usersTable.id }).from(usersTable);
     const bots        = await db.select({ id: botsTable.id, status: botsTable.status, pnlAllTime: botsTable.pnlAllTime }).from(botsTable);
 
-    const totalRevenue = 48250 + users.length * 49;
+    const subs = await db.select({ amountCents: subscriptionsTable.amountCents, status: subscriptionsTable.status })
+      .from(subscriptionsTable);
+    const activeRevenue = subs
+      .filter(s => s.status === "active" || s.status === "trialing")
+      .reduce((acc, s) => acc + (s.amountCents ?? 0), 0);
+    const totalRevenue = Math.round(activeRevenue / 100);
+
     res.json({
       totalCompanies:   companies.length,
       totalMembers:     members.length,
@@ -40,8 +46,8 @@ router.get("/company-admin/stats", async (req, res) => {
       totalBots:        bots.length,
       runningBots:      bots.filter(b => b.status === "RUNNING").length,
       totalRevenue,
-      openTickets:      7,
-      liveAccounts:     users.length > 0 ? 1 : 0,
+      openTickets:      0,
+      liveAccounts:     users.length,
     });
   } catch (err) {
     req.log.error(err);
@@ -165,26 +171,61 @@ router.post("/company-admin/bots/start-all", async (req, res) => {
 /* ── GET /api/company-admin/billing ──────────────────────────────────────── */
 router.get("/company-admin/billing", async (req, res) => {
   try {
-    const users = await db.select({ id: usersTable.id }).from(usersTable);
-    const count = users.length;
+    const subs = await db
+      .select({
+        id:         subscriptionsTable.id,
+        userId:     subscriptionsTable.userId,
+        plan:       subscriptionsTable.plan,
+        status:     subscriptionsTable.status,
+        amountCents: subscriptionsTable.amountCents,
+        createdAt:  subscriptionsTable.createdAt,
+      })
+      .from(subscriptionsTable)
+      .orderBy(desc(subscriptionsTable.createdAt))
+      .limit(50);
+
+    const active   = subs.filter(s => s.status === "active");
+    const trialing = subs.filter(s => s.status === "trialing");
+    const pastDue  = subs.filter(s => s.status === "past_due");
+
+    const monthlyRevenue = active.reduce((acc, s) => acc + (s.amountCents ?? 0), 0) / 100;
+
+    const planCounts: Record<string, number> = {};
+    subs.forEach(s => { planCounts[s.plan] = (planCounts[s.plan] ?? 0) + 1; });
+
+    const userIds = [...new Set(subs.map(s => s.userId).filter(Boolean))];
+    const userRows = userIds.length
+      ? await db.select({ id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email })
+          .from(usersTable)
+      : [];
+    const userMap = Object.fromEntries(userRows.map(u => [u.id, u]));
+
+    const recentTransactions = subs.slice(0, 10).map((s, i) => {
+      const u = userMap[s.userId ?? ""];
+      const name = u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email || "User" : "User";
+      return {
+        id:     `TXN-${String(i + 1).padStart(3, "0")}`,
+        user:   name,
+        plan:   s.plan,
+        amount: Math.round((s.amountCents ?? 0) / 100),
+        status: s.status === "active" ? "success" : s.status === "past_due" ? "failed" : s.status,
+        date:   s.createdAt?.toISOString() ?? new Date().toISOString(),
+      };
+    });
+
     res.json({
-      monthlyRevenue:   count * 49 + 1200,
-      annualRevenue:    (count * 49 + 1200) * 12,
-      activeSubscriptions: count,
-      pendingPayments:  2,
-      failedPayments:   1,
+      monthlyRevenue:      parseFloat(monthlyRevenue.toFixed(2)),
+      annualRevenue:       parseFloat((monthlyRevenue * 12).toFixed(2)),
+      activeSubscriptions: active.length + trialing.length,
+      pendingPayments:     trialing.length,
+      failedPayments:      pastDue.length,
       plans: [
-        { name: "Starter",     price: 29,  subscribers: Math.max(0, Math.floor(count * 0.3)), color: "blue" },
-        { name: "Pro",         price: 49,  subscribers: Math.max(0, Math.floor(count * 0.5)), color: "violet" },
-        { name: "Enterprise",  price: 199, subscribers: Math.max(0, Math.floor(count * 0.2)), color: "amber" },
+        { name: "Free",       price: 0,    subscribers: planCounts["free"]       ?? 0, color: "gray" },
+        { name: "Starter",    price: 49,   subscribers: planCounts["starter"]    ?? 0, color: "blue" },
+        { name: "Pro",        price: 149,  subscribers: planCounts["pro"]        ?? 0, color: "violet" },
+        { name: "Enterprise", price: null, subscribers: planCounts["enterprise"] ?? 0, color: "amber" },
       ],
-      recentTransactions: [
-        { id: "TXN-001", user: "Alex Müller",   plan: "Pro",        amount: 49,  status: "success",  date: new Date(Date.now() - 86400000).toISOString() },
-        { id: "TXN-002", user: "Sara Johnson",  plan: "Enterprise", amount: 199, status: "success",  date: new Date(Date.now() - 172800000).toISOString() },
-        { id: "TXN-003", user: "Mike Chen",     plan: "Starter",    amount: 29,  status: "success",  date: new Date(Date.now() - 259200000).toISOString() },
-        { id: "TXN-004", user: "Fatima Al-R.",  plan: "Pro",        amount: 49,  status: "failed",   date: new Date(Date.now() - 345600000).toISOString() },
-        { id: "TXN-005", user: "Dmitri Volkov", plan: "Pro",        amount: 49,  status: "pending",  date: new Date(Date.now() - 432000000).toISOString() },
-      ],
+      recentTransactions,
     });
   } catch (err) {
     req.log.error(err);
@@ -193,16 +234,8 @@ router.get("/company-admin/billing", async (req, res) => {
 });
 
 /* ── GET /api/company-admin/support ──────────────────────────────────────── */
-router.get("/company-admin/support", async (req, res) => {
-  res.json([
-    { id: "TKT-001", subject: "Cannot connect MT5 broker",        user: "Alex Müller",   priority: "high",   status: "open",       category: "Technical",  created: new Date(Date.now() - 3600000).toISOString() },
-    { id: "TKT-002", subject: "Bot keeps stopping unexpectedly",   user: "Sara Johnson",  priority: "high",   status: "open",       category: "Bots",       created: new Date(Date.now() - 7200000).toISOString() },
-    { id: "TKT-003", subject: "Billing charge dispute",            user: "Mike Chen",     priority: "medium", status: "pending",    category: "Billing",    created: new Date(Date.now() - 86400000).toISOString() },
-    { id: "TKT-004", subject: "Request to upgrade to Enterprise",  user: "Fatima Al-R.", priority: "low",    status: "resolved",   category: "Billing",    created: new Date(Date.now() - 172800000).toISOString() },
-    { id: "TKT-005", subject: "KYC document submission issue",     user: "Dmitri Volkov", priority: "medium", status: "open",       category: "Compliance", created: new Date(Date.now() - 259200000).toISOString() },
-    { id: "TKT-006", subject: "Strategy builder export not working",user: "Linda Park",   priority: "low",    status: "pending",    category: "Technical",  created: new Date(Date.now() - 345600000).toISOString() },
-    { id: "TKT-007", subject: "Account password reset request",    user: "Omar Hassan",   priority: "low",    status: "resolved",   category: "Account",    created: new Date(Date.now() - 432000000).toISOString() },
-  ]);
+router.get("/company-admin/support", (_req, res) => {
+  res.json([]);
 });
 
 /* ── PATCH /api/company-admin/support/:id ────────────────────────────────── */
@@ -214,32 +247,23 @@ router.patch("/company-admin/support/:id", (req, res) => {
 /* ── GET /api/company-admin/live-accounts ────────────────────────────────── */
 router.get("/company-admin/live-accounts", async (req, res) => {
   try {
-    const users = await db.select().from(usersTable).limit(10);
-    const accounts = users.map((u, i) => ({
+    const brokers = await db.select().from(brokersTable).limit(50);
+    const accounts = brokers.map((b, i) => ({
       id:            `LA-${1000 + i}`,
-      userId:        u.id,
-      userName:      `${u.firstName ?? "User"} ${u.lastName ?? ""}`.trim(),
-      email:         u.email ?? `user${i}@tradevision.ai`,
-      broker:        ["MetaTrader 5", "cTrader", "Binance"][i % 3],
-      accountNumber: `MT5-${400000 + i * 117}`,
-      balance:       parseFloat((10000 + Math.random() * 90000).toFixed(2)),
-      equity:        parseFloat((10000 + Math.random() * 95000).toFixed(2)),
-      margin:        parseFloat((Math.random() * 2000).toFixed(2)),
+      userId:        String(b.id),
+      userName:      b.broker,
+      email:         "",
+      broker:        b.broker,
+      accountNumber: b.accountNumber,
+      balance:       parseFloat(b.balance),
+      equity:        parseFloat(b.equity),
+      margin:        0,
       currency:      "USD",
-      leverage:      [100, 200, 500][i % 3],
-      status:        i === 3 ? "suspended" : "active",
-      openTrades:    Math.floor(Math.random() * 8),
-      totalPnl:      parseFloat(((Math.random() - 0.3) * 5000).toFixed(2)),
+      leverage:      100,
+      status:        b.isConnected ? "active" : "suspended",
+      openTrades:    0,
+      totalPnl:      parseFloat(b.profit),
     }));
-    if (accounts.length === 0) {
-      accounts.push({
-        id: "LA-DEMO-001", userId: "demo", userName: "Demo Trader",
-        email: "demo@tradevision.ai", broker: "MetaTrader 5",
-        accountNumber: "MT5-LIVE-400100", balance: 50000.00, equity: 52340.00,
-        margin: 850.00, currency: "USD", leverage: 100, status: "active",
-        openTrades: 3, totalPnl: 2340.00,
-      });
-    }
     res.json(accounts);
   } catch (err) {
     req.log.error(err);

@@ -8,7 +8,7 @@
  */
 
 import { Router } from "express";
-import { db, performanceSnapshotsTable, activityLogsTable } from "@workspace/db";
+import { db, performanceSnapshotsTable, activityLogsTable, brokersTable, botsTable } from "@workspace/db";
 import { desc } from "drizzle-orm";
 import {
   getSnapshots, buildEquityCurve, takeSnapshot,
@@ -61,15 +61,18 @@ router.get("/analytics/summary", async (req, res) => {
     const rows = await getSnapshots(30);
     if (rows.length === 0) {
       res.json({
-        sharpeRatio: 2.14, sortinoRatio: 2.87, recoveryFactor: 4.28,
-        profitFactor: 1.87, winRate: 78.5, maxDrawdown: 4.12,
-        avgDailyPnl: 540, monthlyReturn: 3.8,
-        totalTrades: 126, snapshotDays: 0,
+        sharpeRatio: 0, sortinoRatio: 0, recoveryFactor: 0,
+        profitFactor: 0, winRate: 0, maxDrawdown: 0,
+        avgDailyPnl: 0, monthlyReturn: 0,
+        totalTrades: 0, snapshotDays: 0,
       });
       return;
     }
 
-    const returns    = rows.map(r => parseFloat(String(r.dailyPnl)) / 245_000);
+    const brokers = await db.select({ equity: brokersTable.equity }).from(brokersTable);
+    const totalEquity = brokers.reduce((s, b) => s + parseFloat(b.equity), 0) || 1;
+
+    const returns    = rows.map(r => parseFloat(String(r.dailyPnl)) / totalEquity);
     const wins       = rows.filter(r => parseFloat(String(r.dailyPnl)) > 0).map(r => parseFloat(String(r.dailyPnl)));
     const losses     = rows.filter(r => parseFloat(String(r.dailyPnl)) < 0).map(r => parseFloat(String(r.dailyPnl)));
     const latest     = rows[0];
@@ -80,12 +83,12 @@ router.get("/analytics/summary", async (req, res) => {
     res.json({
       sharpeRatio:    calcSharpe(returns),
       sortinoRatio:   calcSortino(returns),
-      recoveryFactor: calcRecoveryFactor(netProfit, maxDD * 2450),
+      recoveryFactor: calcRecoveryFactor(netProfit, maxDD * totalEquity),
       profitFactor:   calcProfitFactor(wins, losses),
       winRate:        latest ? parseFloat(String(latest.winRate)) : 0,
       maxDrawdown:    maxDD,
       avgDailyPnl:    parseFloat(avgDailyPnl.toFixed(2)),
-      monthlyReturn:  parseFloat(((netProfit / 245_000) * 100).toFixed(2)),
+      monthlyReturn:  parseFloat(((netProfit / totalEquity) * 100).toFixed(2)),
       totalTrades:    latest ? latest.totalTrades : 0,
       snapshotDays:   rows.length,
     });
@@ -97,26 +100,37 @@ router.get("/analytics/summary", async (req, res) => {
 
 router.post("/analytics/snapshot", async (req, res) => {
   try {
-    const returns = Array.from({ length: 20 }, () => (Math.random() - 0.3) * 0.012);
-    const wins    = returns.filter(r => r > 0).map(r => r * 245_000);
-    const losses  = returns.filter(r => r < 0).map(r => r * 245_000);
+    const brokers = await db.select().from(brokersTable);
+    const bots    = await db.select().from(botsTable);
+
+    const equity  = brokers.reduce((s, b) => s + parseFloat(b.equity), 0);
+    const balance = brokers.reduce((s, b) => s + parseFloat(b.balance), 0);
+    const dailyPnl = bots.reduce((s, b) => s + parseFloat(b.pnlToday), 0);
+    const allTimePnl = bots.reduce((s, b) => s + parseFloat(b.pnlAllTime), 0);
+    const winRates = bots.filter(b => parseFloat(b.winRate) > 0).map(b => parseFloat(b.winRate));
+    const avgWinRate = winRates.length ? winRates.reduce((a, b) => a + b, 0) / winRates.length : 0;
+
+    const returns = [dailyPnl / (equity || 1)];
+    const wins    = dailyPnl > 0 ? [dailyPnl] : [];
+    const losses  = dailyPnl < 0 ? [dailyPnl] : [];
+
     await takeSnapshot(req.body?.botId ?? null, {
       date:           new Date().toISOString().slice(0, 10),
-      equity:         req.body?.equity ?? 250_000,
-      balance:        req.body?.balance ?? 245_000,
-      dailyPnl:       req.body?.dailyPnl ?? (Math.random() - 0.3) * 2500,
-      weeklyPnl:      (Math.random() - 0.2) * 8000,
-      monthlyPnl:     (Math.random() + 0.2) * 18000,
-      winRate:        68 + Math.random() * 15,
-      avgWin:         145 + Math.random() * 80,
-      avgLoss:        -(55 + Math.random() * 30),
+      equity:         req.body?.equity ?? equity,
+      balance:        req.body?.balance ?? balance,
+      dailyPnl:       req.body?.dailyPnl ?? dailyPnl,
+      weeklyPnl:      allTimePnl / 4,
+      monthlyPnl:     allTimePnl,
+      winRate:        avgWinRate,
+      avgWin:         wins.length ? wins.reduce((a, b) => a + b, 0) / wins.length : 0,
+      avgLoss:        losses.length ? losses.reduce((a, b) => a + b, 0) / losses.length : 0,
       profitFactor:   calcProfitFactor(wins, losses),
       sharpeRatio:    calcSharpe(returns),
       sortinoRatio:   calcSortino(returns),
-      recoveryFactor: calcRecoveryFactor(18_000, 4_200),
-      maxDrawdown:    3.5 + Math.random() * 2,
-      totalTrades:    126,
-      openTrades:     3,
+      recoveryFactor: calcRecoveryFactor(allTimePnl, Math.abs(dailyPnl) * 2 || 1),
+      maxDrawdown:    equity > 0 && balance > 0 ? Math.max(0, (balance - equity) / balance * 100) : 0,
+      totalTrades:    bots.length,
+      openTrades:     bots.filter(b => b.status === "RUNNING").length,
     });
     res.json({ success: true });
   } catch (e) {
