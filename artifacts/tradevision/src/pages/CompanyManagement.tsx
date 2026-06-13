@@ -268,14 +268,45 @@ export default function CompanyManagement() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role: role.toLowerCase() }),
       });
-      if (!res.ok) throw new Error("Invite failed");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || "Invite failed");
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["company-members"] });
+      toast({ title: "Member added!", description: data.message });
+    },
+    onError: (err: Error) => toast({ title: "Could not add member", description: err.message, variant: "destructive" }),
+  });
+
+  const statusMut = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`/api/company/members/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Status update failed");
       return res.json();
     },
-    onSuccess: (_, { email, role }) => {
+    onSuccess: (_, { status }) => {
       qc.invalidateQueries({ queryKey: ["company-members"] });
-      toast({ title: "Invitation sent", description: `${email} invited as ${role}.` });
+      toast({ title: status === "suspended" ? "Member suspended" : "Member activated" });
     },
-    onError: () => toast({ title: "Error", description: "Failed to send invitation.", variant: "destructive" }),
+    onError: () => toast({ title: "Error", description: "Failed to update status.", variant: "destructive" }),
+  });
+
+  const removeMut = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/company/members/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Remove failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["company-members"] });
+      toast({ title: "Member removed", description: "Member has been removed from the team." });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to remove member.", variant: "destructive" }),
   });
 
   const roleChangeMut = useMutation({
@@ -301,6 +332,8 @@ export default function CompanyManagement() {
   const companyExists = overview?.exists === true;
   const companyName = overview?.company?.name ?? "Your Company";
   const companyCountry = overview?.company?.country ?? "USA";
+  const myRole = (overview?.myRole ?? null) as string | null;
+  const canManage = !!myRole && ["owner", "admin"].includes(myRole);
 
   const filtered = members.filter(m => {
     const s = search.toLowerCase();
@@ -324,14 +357,14 @@ export default function CompanyManagement() {
   const handleStatusToggle = (id: string) => {
     const m = members.find(x => x.id === id);
     if (!m || m.role === "Owner") return;
-    // Optimistic UI only (no dedicated endpoint yet)
-    toast({ title: "Status updated", description: `${m.name}'s status changed.` });
+    const newStatus = m.status === "Active" ? "suspended" : "active";
+    statusMut.mutate({ id, status: newStatus });
   };
 
   const handleRemove = (id: string) => {
     const m = members.find(x => x.id === id);
     if (!m || m.role === "Owner") return;
-    toast({ title: "Member removed", description: `${m.name} removed from the team.` });
+    removeMut.mutate(id);
   };
 
   const handleInvite = (email: string, role: Role) => {
@@ -443,13 +476,15 @@ export default function CompanyManagement() {
               </div>
             </div>
 
-            <Button
-              onClick={() => setShowInvite(true)}
-              className="bg-primary hover:bg-primary/90 h-9 px-4 text-sm font-semibold shrink-0 shadow-lg shadow-primary/20"
-              data-testid="button-invite-member"
-            >
-              <UserPlus className="w-3.5 h-3.5 mr-2" />Invite Member
-            </Button>
+            {canManage && (
+              <Button
+                onClick={() => setShowInvite(true)}
+                className="bg-primary hover:bg-primary/90 h-9 px-4 text-sm font-semibold shrink-0 shadow-lg shadow-primary/20"
+                data-testid="button-invite-member"
+              >
+                <UserPlus className="w-3.5 h-3.5 mr-2" />Invite Member
+              </Button>
+            )}
           </div>
         </div>
 
@@ -598,7 +633,7 @@ export default function CompanyManagement() {
                         <td className={`px-4 py-3.5 text-right text-sm font-bold ${pnlPos ? "text-success" : pnlNeg ? "text-destructive" : "text-muted-foreground"}`}>{m.pnl}</td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {!isOwner ? (
+                            {canManage && !isOwner ? (
                               <>
                                 <button
                                   className="w-7 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center transition-colors"
@@ -659,7 +694,7 @@ export default function CompanyManagement() {
                           <span className="text-[10px] text-muted-foreground">{m.bots} bots</span>
                         </div>
                       </div>
-                      {m.role !== "Owner" && (
+                      {canManage && m.role !== "Owner" && (
                         <button
                           className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0"
                           onClick={() => setEditingRole({ id: m.id, current: m.role })}

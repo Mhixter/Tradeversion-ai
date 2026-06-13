@@ -8,11 +8,21 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@workspace/replit-auth-web";
+import { useCompanyRole } from "@/hooks/useCompanyRole";
+
+const ROLE_PILL: Record<string, string> = {
+  owner:   "bg-purple-500/20 text-purple-400",
+  admin:   "bg-red-500/20 text-red-400",
+  manager: "bg-blue-500/20 text-blue-400",
+  trader:  "bg-emerald-500/20 text-emerald-400",
+  viewer:  "bg-gray-500/20 text-gray-400",
+};
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const [location] = useLocation();
   const [isDark, setIsDark] = useState(true);
   const { user, logout } = useAuth();
+  const { role, canViewBilling, canManageMembers, canManageBots, canCreateStrategies, canManageRisk, inCompany } = useCompanyRole();
 
   useEffect(() => {
     const stored = localStorage.getItem("tv-theme");
@@ -29,19 +39,20 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   };
 
   const navItems = [
-    { name: "Dashboard",       href: "/",                  icon: LayoutDashboard },
-    { name: "Strategy Buil…",  href: "/strategy-builder",  icon: GitBranch       },
-    { name: "Bot Manager",     href: "/bot-manager",        icon: Bot             },
-    { name: "AI Marketplace",  href: "/ai-marketplace",    icon: Store           },
-    { name: "Backtesting",     href: "/backtesting",        icon: LineChart       },
-    { name: "Copy Trading",    href: "/copy-trading",       icon: Users           },
-    { name: "Portfolio",       href: "/portfolio",          icon: PieChart        },
-    { name: "Risk Center",     href: "/risk-center",        icon: ShieldAlert     },
-    { name: "Notifications",   href: "/notifications",      icon: Bell, badge: 8  },
-    { name: "KYC",             href: "/kyc",                icon: Shield          },
-    { name: "Billing",         href: "/billing",            icon: CreditCard      },
-    { name: "Settings",        href: "/settings",           icon: Settings        },
-  ];
+    { name: "Dashboard",       href: "/",                 icon: LayoutDashboard, show: true },
+    { name: "Strategy Buil…",  href: "/strategy-builder", icon: GitBranch,       show: canCreateStrategies || !inCompany },
+    { name: "Bot Manager",     href: "/bot-manager",      icon: Bot,             show: canManageBots || !inCompany },
+    { name: "AI Marketplace",  href: "/ai-marketplace",   icon: Store,           show: true },
+    { name: "Backtesting",     href: "/backtesting",      icon: LineChart,       show: true },
+    { name: "Copy Trading",    href: "/copy-trading",     icon: Users,           show: true },
+    { name: "Portfolio",       href: "/portfolio",        icon: PieChart,        show: true },
+    { name: "Risk Center",     href: "/risk-center",      icon: ShieldAlert,     show: canManageRisk || !inCompany },
+    { name: "Company",         href: "/company",          icon: Building2,       show: true },
+    { name: "Notifications",   href: "/notifications",    icon: Bell,            show: true, badge: 8 },
+    { name: "KYC",             href: "/kyc",              icon: Shield,          show: true },
+    { name: "Billing",         href: "/billing",          icon: CreditCard,      show: canViewBilling || !inCompany },
+    { name: "Settings",        href: "/settings",         icon: Settings,        show: true },
+  ].filter(i => i.show);
 
   const initials = user
     ? `${(user.firstName?.[0] ?? "")}${(user.lastName?.[0] ?? "")}`.toUpperCase() || "U"
@@ -82,7 +93,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               >
                 <div className="relative shrink-0">
                   <item.icon className="w-4 h-4" />
-                  {item.badge && (
+                  {"badge" in item && item.badge && (
                     <div className="absolute -top-1.5 -right-1.5 bg-destructive text-white text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">
                       {item.badge}
                     </div>
@@ -136,7 +147,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           <Moon className={`w-3.5 h-3.5 transition-colors ${isDark ? "text-primary" : "text-muted-foreground"}`} />
         </button>
 
-        {/* User */}
+        {/* User + role badge */}
         <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors group">
           <Avatar className="w-7 h-7 shrink-0">
             <AvatarImage src={user?.profileImageUrl ?? undefined} />
@@ -144,7 +155,13 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           </Avatar>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-foreground truncate leading-tight">{displayName}</p>
-            <p className="text-[10px] text-primary font-semibold leading-tight">PRO</p>
+            {role ? (
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_PILL[role] ?? "bg-gray-500/20 text-gray-400"}`}>
+                {role.charAt(0).toUpperCase() + role.slice(1)}
+              </span>
+            ) : (
+              <p className="text-[10px] text-primary font-semibold leading-tight">PRO</p>
+            )}
           </div>
           <button
             onClick={logout}

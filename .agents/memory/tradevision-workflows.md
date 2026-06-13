@@ -1,27 +1,22 @@
 ---
 name: TradeVision Workflows
-description: Two-workflow setup for frontend and API server; vite proxy for /api
+description: Active artifact workflows, port rules, and rebuild behavior.
 ---
 
-## Workflow Setup
+## Active Workflows
 
-Two separate workflows configured:
+**`artifacts/api-server: API Server`**
+- Dev script: `export PORT=8081 NODE_ENV=development && pnpm run build && pnpm run start`
+- Port: 8081 (hardcoded — OK for internal service, not a webview artifact)
+- **IMPORTANT**: This server builds-then-starts and does NOT watch for file changes. Any route or code change requires a workflow restart to take effect.
 
-**API Server**
-- Command: `PORT=8081 pnpm --filter @workspace/api-server dev`
-- Port: 8081
-- Type: console
+**`artifacts/tradevision: web`**
+- Dev script: `BASE_PATH=/ API_PORT=8081 vite --config vite.config.ts --host 0.0.0.0`
+- Port: injected dynamically by Replit (e.g. 18792). **Never hardcode `PORT=` in this script** — Replit's proxy routes the external domain to this dynamic port; overriding it causes 502.
+- Vite HMR works — frontend changes appear immediately without restart.
 
-**TradeVision (Frontend)**
-- Command: `PORT=8080 BASE_PATH=/ API_PORT=8081 pnpm --filter @workspace/tradevision dev`
-- Port: 8080 (maps to external port 80)
-- Type: webview
+## Proxy
+Vite proxies `/api/*` → `http://localhost:8081` and `/ws` → `ws://localhost:8081` (see vite.config.ts).
 
-## Vite Proxy
-Vite dev server proxies `/api/*` to `http://localhost:8081` (controlled by `API_PORT` env var). This is in `artifacts/tradevision/vite.config.ts`.
-
-**Why:** The frontend and backend run on separate ports; Vite's proxy is the cleanest way to forward /api calls in dev without CORS issues.
-
-## Port Mapping (.replit)
-- 8080 → 80 (main webview)
-- 8081 → 8081 (API, also accessible)
+## Why Artifact Workflows
+The old "Project" parallel runner + "API Server" + "TradeVision" standalone workflows caused port-conflict loops. Deleted those; the Replit artifact workflows (`artifacts/…`) are the correct mechanism — they register with the Replit proxy and handle dynamic port injection.

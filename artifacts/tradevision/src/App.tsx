@@ -5,6 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@workspace/replit-auth-web";
 import NotFound from "@/pages/not-found";
 import { LoginGate } from "@/pages/LoginGate";
+import { useCompanyRole } from "@/hooks/useCompanyRole";
+import { RoleGate } from "@/components/RoleGate";
+import { Layout } from "@/components/layout/Layout";
 
 import Dashboard from "@/pages/Dashboard";
 import StrategyBuilder from "@/pages/StrategyBuilder";
@@ -39,23 +42,75 @@ function isPublicPath(path: string) {
   return PUBLIC_PATHS.some(p => path === p || path.startsWith(p + "/"));
 }
 
+/* Billing — owner only */
+function BillingGated() {
+  const { role, isLoading, inCompany } = useCompanyRole();
+  if (!inCompany) return <Billing />;
+  return (
+    <Layout title="Billing" subtitle="Manage your subscription and payment methods">
+      <RoleGate allowed={["owner"]} currentRole={role} isLoading={isLoading} pageName="Billing">
+        <Billing />
+      </RoleGate>
+    </Layout>
+  );
+}
+
+/* Risk Center — owner/admin/manager */
+function RiskCenterGated() {
+  const { role, isLoading, inCompany } = useCompanyRole();
+  if (!inCompany) return <RiskCenter />;
+  return (
+    <Layout title="Risk Center" subtitle="Manage risk parameters and portfolio protection">
+      <RoleGate allowed={["owner", "admin", "manager"]} currentRole={role} isLoading={isLoading} pageName="Risk Center">
+        <RiskCenter />
+      </RoleGate>
+    </Layout>
+  );
+}
+
+/* Strategy Builder — not viewer */
+function StrategyBuilderGated() {
+  const { role, isLoading, inCompany } = useCompanyRole();
+  if (!inCompany) return <StrategyBuilder />;
+  return (
+    <Layout title="Strategy Builder" subtitle="Build and configure AI trading strategies">
+      <RoleGate allowed={["owner", "admin", "manager", "trader"]} currentRole={role} isLoading={isLoading} pageName="Strategy Builder">
+        <StrategyBuilder />
+      </RoleGate>
+    </Layout>
+  );
+}
+
+/* Bot Manager — not viewer */
+function BotManagerGated() {
+  const { role, isLoading, inCompany } = useCompanyRole();
+  if (!inCompany) return <BotManager />;
+  return (
+    <Layout title="Bot Manager" subtitle="Deploy and manage your AI trading bots">
+      <RoleGate allowed={["owner", "admin", "manager", "trader"]} currentRole={role} isLoading={isLoading} pageName="Bot Manager">
+        <BotManager />
+      </RoleGate>
+    </Layout>
+  );
+}
+
 function AuthedRouter() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
-      <Route path="/strategy-builder" component={StrategyBuilder} />
-      <Route path="/bot-manager" component={BotManager} />
+      <Route path="/strategy-builder" component={StrategyBuilderGated} />
+      <Route path="/bot-manager" component={BotManagerGated} />
       <Route path="/ai-marketplace" component={AIMarketplace} />
       <Route path="/backtesting" component={Backtesting} />
       <Route path="/copy-trading" component={CopyTrading} />
       <Route path="/portfolio" component={Portfolio} />
-      <Route path="/risk-center" component={RiskCenter} />
+      <Route path="/risk-center" component={RiskCenterGated} />
       <Route path="/notifications" component={Notifications} />
       <Route path="/settings" component={Settings} />
       <Route path="/account" component={Account} />
       <Route path="/company" component={CompanyManagement} />
       <Route path="/kyc" component={KYC} />
-      <Route path="/billing" component={Billing} />
+      <Route path="/billing" component={BillingGated} />
       {/* Public pages also accessible when logged in */}
       <Route path="/landing">{() => <Landing />}</Route>
       <Route path="/faq" component={FAQPage} />
