@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@workspace/replit-auth-web";
 import NotFound from "@/pages/not-found";
+import { LoginGate } from "@/pages/LoginGate";
 
 import Dashboard from "@/pages/Dashboard";
 import StrategyBuilder from "@/pages/StrategyBuilder";
@@ -69,12 +70,13 @@ function AuthedRouter() {
 function PublicRouter({ login }: { login: () => void }) {
   return (
     <Switch>
+      <Route path="/landing">{() => <Landing onLogin={login} />}</Route>
       <Route path="/faq" component={FAQPage} />
       <Route path="/blog" component={BlogPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/signup" component={Signup} />
-      {/* Default: show full landing page */}
-      <Route>{() => <Landing onLogin={login} />}</Route>
+      {/* Default: show login gate for all protected routes */}
+      <Route>{() => <LoginGate onLogin={login} />}</Route>
     </Switch>
   );
 }

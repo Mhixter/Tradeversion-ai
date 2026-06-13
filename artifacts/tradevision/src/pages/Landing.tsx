@@ -280,56 +280,65 @@ function Hero({ onLogin }: { onLogin?: () => void }) {
 }
 
 /* ── Broker logos strip ─────────────────────────────────────────────────────── */
-/* ── Broker logo pill ─────────────────────────────────────────────────────── */
-function BrokerPill({ name, color, dot }: { name: string; color: string; dot: string }) {
+function BrokerPill({ name, domain, dot }: { name: string; domain: string; dot: string }) {
+  const [imgOk, setImgOk] = React.useState(true);
   return (
-    <div className="flex-shrink-0 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl border border-border/50 bg-card/80 backdrop-blur mx-2 select-none" style={{ boxShadow:"0 1px 8px rgba(0,0,0,.18)" }}>
-      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
-      <span className="text-xs font-bold whitespace-nowrap" style={{ color }}>{name}</span>
+    <div className="flex-shrink-0 inline-flex items-center gap-2.5 px-4 py-2 rounded-xl border border-border/50 bg-card/80 backdrop-blur mx-2 select-none" style={{ boxShadow:"0 1px 8px rgba(0,0,0,.18)" }}>
+      {imgOk ? (
+        <img
+          src={`https://logo.clearbit.com/${domain}`}
+          alt={name}
+          onError={() => setImgOk(false)}
+          className="w-5 h-5 rounded object-contain flex-shrink-0"
+        />
+      ) : (
+        <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: dot }} />
+      )}
+      <span className="text-xs font-bold whitespace-nowrap text-foreground">{name}</span>
     </div>
   );
 }
 
-const ROW1: { name: string; color: string; dot: string }[] = [
-  { name:"IC Markets",          color:"#e8372c", dot:"#e8372c" },
-  { name:"Exness",              color:"#ff6b00", dot:"#ff6b00" },
-  { name:"Binance",             color:"#f0b90b", dot:"#f0b90b" },
-  { name:"Interactive Brokers", color:"#e31837", dot:"#e31837" },
-  { name:"OANDA",               color:"#0073cf", dot:"#0073cf" },
-  { name:"Pepperstone",         color:"#00a651", dot:"#00a651" },
-  { name:"XM",                  color:"#f5a623", dot:"#f5a623" },
-  { name:"Deriv",               color:"#ff444f", dot:"#ff444f" },
-  { name:"Alpaca",              color:"#ffb347", dot:"#ffb347" },
-  { name:"Kraken",              color:"#5741d9", dot:"#5741d9" },
-  { name:"IG Group",            color:"#0099cc", dot:"#0099cc" },
-  { name:"FxPro",               color:"#ff6600", dot:"#ff6600" },
-  { name:"AvaTrade",            color:"#002d62", dot:"#4a90e2" },
-  { name:"ThinkMarkets",        color:"#00b0f0", dot:"#00b0f0" },
-  { name:"Tickmill",            color:"#d40000", dot:"#d40000" },
-  { name:"RoboForex",           color:"#f4a21a", dot:"#f4a21a" },
-  { name:"OctaFX",              color:"#ff6600", dot:"#ff6600" },
-  { name:"HotForex",            color:"#f5a623", dot:"#f5a623" },
+const ROW1: { name: string; domain: string; dot: string }[] = [
+  { name:"IC Markets",          domain:"icmarkets.com",          dot:"#e8372c" },
+  { name:"Exness",              domain:"exness.com",             dot:"#ff6b00" },
+  { name:"Binance",             domain:"binance.com",            dot:"#f0b90b" },
+  { name:"Interactive Brokers", domain:"interactivebrokers.com", dot:"#e31837" },
+  { name:"OANDA",               domain:"oanda.com",              dot:"#0073cf" },
+  { name:"Pepperstone",         domain:"pepperstone.com",        dot:"#00a651" },
+  { name:"XM",                  domain:"xm.com",                 dot:"#f5a623" },
+  { name:"Deriv",               domain:"deriv.com",              dot:"#ff444f" },
+  { name:"Alpaca",              domain:"alpaca.markets",         dot:"#ffb347" },
+  { name:"Kraken",              domain:"kraken.com",             dot:"#5741d9" },
+  { name:"IG Group",            domain:"ig.com",                 dot:"#0099cc" },
+  { name:"FxPro",               domain:"fxpro.com",              dot:"#ff6600" },
+  { name:"AvaTrade",            domain:"avatrade.com",           dot:"#4a90e2" },
+  { name:"ThinkMarkets",        domain:"thinkmarkets.com",       dot:"#00b0f0" },
+  { name:"Tickmill",            domain:"tickmill.com",           dot:"#d40000" },
+  { name:"RoboForex",           domain:"roboforex.com",          dot:"#f4a21a" },
+  { name:"OctaFX",              domain:"octafx.com",             dot:"#ff6600" },
+  { name:"HotForex",            domain:"hotforex.com",           dot:"#f5a623" },
 ];
 
-const ROW2: { name: string; color: string; dot: string }[] = [
-  { name:"Coinbase",            color:"#0052ff", dot:"#0052ff" },
-  { name:"ByBit",              color:"#f7a600", dot:"#f7a600" },
-  { name:"OKX",                 color:"#ffffff", dot:"#888888" },
-  { name:"KuCoin",              color:"#23af91", dot:"#23af91" },
-  { name:"Bitfinex",            color:"#16b157", dot:"#16b157" },
-  { name:"Huobi",               color:"#00a4c0", dot:"#00a4c0" },
-  { name:"Gate.io",             color:"#e74c3c", dot:"#e74c3c" },
-  { name:"TradeStation",        color:"#1a73e8", dot:"#1a73e8" },
-  { name:"TD Ameritrade",       color:"#006b3f", dot:"#006b3f" },
-  { name:"Charles Schwab",      color:"#00a0df", dot:"#00a0df" },
-  { name:"Webull",              color:"#48c4e6", dot:"#48c4e6" },
-  { name:"Vantage",             color:"#005bac", dot:"#005bac" },
-  { name:"Admirals",            color:"#e30613", dot:"#e30613" },
-  { name:"FXTM",                color:"#ff6d00", dot:"#ff6d00" },
-  { name:"FP Markets",          color:"#00529b", dot:"#00529b" },
-  { name:"Eightcap",            color:"#1a1a2e", dot:"#4a90e2" },
-  { name:"TMGM",                color:"#003399", dot:"#4a90e2" },
-  { name:"Dukascopy",           color:"#e8372c", dot:"#e8372c" },
+const ROW2: { name: string; domain: string; dot: string }[] = [
+  { name:"Coinbase",            domain:"coinbase.com",           dot:"#0052ff" },
+  { name:"ByBit",               domain:"bybit.com",              dot:"#f7a600" },
+  { name:"OKX",                 domain:"okx.com",                dot:"#888888" },
+  { name:"KuCoin",              domain:"kucoin.com",             dot:"#23af91" },
+  { name:"Bitfinex",            domain:"bitfinex.com",           dot:"#16b157" },
+  { name:"Huobi",               domain:"huobi.com",              dot:"#00a4c0" },
+  { name:"Gate.io",             domain:"gate.io",                dot:"#e74c3c" },
+  { name:"TradeStation",        domain:"tradestation.com",       dot:"#1a73e8" },
+  { name:"TD Ameritrade",       domain:"tdameritrade.com",       dot:"#006b3f" },
+  { name:"Charles Schwab",      domain:"schwab.com",             dot:"#00a0df" },
+  { name:"Webull",              domain:"webull.com",             dot:"#48c4e6" },
+  { name:"Vantage",             domain:"vantagemarkets.com",     dot:"#005bac" },
+  { name:"Admirals",            domain:"admirals.com",           dot:"#e30613" },
+  { name:"FXTM",                domain:"forextime.com",          dot:"#ff6d00" },
+  { name:"FP Markets",          domain:"fpmarkets.com",          dot:"#00529b" },
+  { name:"Eightcap",            domain:"eightcap.com",           dot:"#4a90e2" },
+  { name:"TMGM",                domain:"tmgm.com",               dot:"#4a90e2" },
+  { name:"Dukascopy",           domain:"dukascopy.com",          dot:"#e8372c" },
 ];
 
 /* Keyframe injected once at module level */
