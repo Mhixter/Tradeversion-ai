@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@workspace/replit-auth-web";
-import { LoginGate } from "@/pages/LoginGate";
 import NotFound from "@/pages/not-found";
 
 import Dashboard from "@/pages/Dashboard";
@@ -23,6 +22,9 @@ import Billing from "@/pages/Billing";
 import Landing from "@/pages/Landing";
 import Signup from "@/pages/Signup";
 import CompanyAdminPortal from "@/pages/CompanyAdminPortal";
+import FAQPage from "@/pages/FAQ";
+import BlogPage from "@/pages/Blog";
+import ContactPage from "@/pages/Contact";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,7 +32,13 @@ const queryClient = new QueryClient({
   },
 });
 
-function Router() {
+/* Public marketing routes — no auth required */
+const PUBLIC_PATHS = ["/landing", "/faq", "/blog", "/contact", "/signup"];
+function isPublicPath(path: string) {
+  return PUBLIC_PATHS.some(p => path === p || path.startsWith(p + "/"));
+}
+
+function AuthedRouter() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
@@ -47,15 +55,33 @@ function Router() {
       <Route path="/company" component={CompanyManagement} />
       <Route path="/kyc" component={KYC} />
       <Route path="/billing" component={Billing} />
-      <Route path="/landing" component={Landing} />
+      {/* Public pages also accessible when logged in */}
+      <Route path="/landing">{() => <Landing />}</Route>
+      <Route path="/faq" component={FAQPage} />
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/contact" component={ContactPage} />
       <Route path="/signup" component={Signup} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
+function PublicRouter({ login }: { login: () => void }) {
+  return (
+    <Switch>
+      <Route path="/faq" component={FAQPage} />
+      <Route path="/blog" component={BlogPage} />
+      <Route path="/contact" component={ContactPage} />
+      <Route path="/signup" component={Signup} />
+      {/* Default: show full landing page */}
+      <Route>{() => <Landing onLogin={login} />}</Route>
+    </Switch>
+  );
+}
+
 function AuthedApp() {
   const { isLoading, isAuthenticated, login } = useAuth();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -70,11 +96,17 @@ function AuthedApp() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <LoginGate onLogin={login} />;
+  /* Always show public pages regardless of auth state */
+  if (isPublicPath(location)) {
+    if (!isAuthenticated) return <PublicRouter login={login} />;
+    return <AuthedRouter />;
   }
 
-  return <Router />;
+  if (!isAuthenticated) {
+    return <PublicRouter login={login} />;
+  }
+
+  return <AuthedRouter />;
 }
 
 /* Dispatch to company admin portal without requiring Replit auth */
