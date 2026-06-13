@@ -280,16 +280,86 @@ function Hero({ onLogin }: { onLogin?: () => void }) {
 }
 
 /* ── Broker logos strip ─────────────────────────────────────────────────────── */
+/* ── Broker logo pill ─────────────────────────────────────────────────────── */
+function BrokerPill({ name, color, dot }: { name: string; color: string; dot: string }) {
+  return (
+    <div className="flex-shrink-0 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl border border-border/50 bg-card/80 backdrop-blur mx-2 select-none" style={{ boxShadow:"0 1px 8px rgba(0,0,0,.18)" }}>
+      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
+      <span className="text-xs font-bold whitespace-nowrap" style={{ color }}>{name}</span>
+    </div>
+  );
+}
+
+const ROW1: { name: string; color: string; dot: string }[] = [
+  { name:"IC Markets",          color:"#e8372c", dot:"#e8372c" },
+  { name:"Exness",              color:"#ff6b00", dot:"#ff6b00" },
+  { name:"Binance",             color:"#f0b90b", dot:"#f0b90b" },
+  { name:"Interactive Brokers", color:"#e31837", dot:"#e31837" },
+  { name:"OANDA",               color:"#0073cf", dot:"#0073cf" },
+  { name:"Pepperstone",         color:"#00a651", dot:"#00a651" },
+  { name:"XM",                  color:"#f5a623", dot:"#f5a623" },
+  { name:"Deriv",               color:"#ff444f", dot:"#ff444f" },
+  { name:"Alpaca",              color:"#ffb347", dot:"#ffb347" },
+  { name:"Kraken",              color:"#5741d9", dot:"#5741d9" },
+  { name:"IG Group",            color:"#0099cc", dot:"#0099cc" },
+  { name:"FxPro",               color:"#ff6600", dot:"#ff6600" },
+  { name:"AvaTrade",            color:"#002d62", dot:"#4a90e2" },
+  { name:"ThinkMarkets",        color:"#00b0f0", dot:"#00b0f0" },
+  { name:"Tickmill",            color:"#d40000", dot:"#d40000" },
+  { name:"RoboForex",           color:"#f4a21a", dot:"#f4a21a" },
+  { name:"OctaFX",              color:"#ff6600", dot:"#ff6600" },
+  { name:"HotForex",            color:"#f5a623", dot:"#f5a623" },
+];
+
+const ROW2: { name: string; color: string; dot: string }[] = [
+  { name:"Coinbase",            color:"#0052ff", dot:"#0052ff" },
+  { name:"ByBit",              color:"#f7a600", dot:"#f7a600" },
+  { name:"OKX",                 color:"#ffffff", dot:"#888888" },
+  { name:"KuCoin",              color:"#23af91", dot:"#23af91" },
+  { name:"Bitfinex",            color:"#16b157", dot:"#16b157" },
+  { name:"Huobi",               color:"#00a4c0", dot:"#00a4c0" },
+  { name:"Gate.io",             color:"#e74c3c", dot:"#e74c3c" },
+  { name:"TradeStation",        color:"#1a73e8", dot:"#1a73e8" },
+  { name:"TD Ameritrade",       color:"#006b3f", dot:"#006b3f" },
+  { name:"Charles Schwab",      color:"#00a0df", dot:"#00a0df" },
+  { name:"Webull",              color:"#48c4e6", dot:"#48c4e6" },
+  { name:"Vantage",             color:"#005bac", dot:"#005bac" },
+  { name:"Admirals",            color:"#e30613", dot:"#e30613" },
+  { name:"FXTM",                color:"#ff6d00", dot:"#ff6d00" },
+  { name:"FP Markets",          color:"#00529b", dot:"#00529b" },
+  { name:"Eightcap",            color:"#1a1a2e", dot:"#4a90e2" },
+  { name:"TMGM",                color:"#003399", dot:"#4a90e2" },
+  { name:"Dukascopy",           color:"#e8372c", dot:"#e8372c" },
+];
+
+/* Keyframe injected once at module level */
+const MARQUEE_CSS = `
+@keyframes marquee-left  { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes marquee-right { from { transform: translateX(-50%) } to { transform: translateX(0) } }
+.marquee-left  { animation: marquee-left  28s linear infinite; }
+.marquee-right { animation: marquee-right 32s linear infinite; }
+.marquee-left:hover, .marquee-right:hover { animation-play-state: paused; }
+`;
+
 function BrokerStrip() {
-  const brokers = ["IC Markets","Exness","Deriv","Pepperstone","XM","OANDA","Binance","Interactive Brokers","FX Pro","IG Group","Alpaca","Kraken"];
   return (
     <section className="py-14 border-y border-border/40 bg-accent/10 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4">
-        <p className="text-center text-[11px] text-muted-foreground mb-8 uppercase tracking-[0.2em] font-semibold">Connected to 47+ leading brokers & exchanges</p>
-        <div className="flex flex-wrap justify-center gap-3">
-          {brokers.map(b => (
-            <div key={b} className="px-4 py-2 rounded-lg border border-border/50 bg-card/60 text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-card transition-all cursor-default">{b}</div>
-          ))}
+      <style>{MARQUEE_CSS}</style>
+      <p className="text-center text-[11px] text-muted-foreground mb-8 uppercase tracking-[0.2em] font-semibold">
+        Connected to 47+ leading brokers &amp; exchanges
+      </p>
+
+      {/* Row 1 — slides left */}
+      <div className="relative mb-3" style={{ maskImage:"linear-gradient(to right,transparent 0%,black 8%,black 92%,transparent 100%)", WebkitMaskImage:"linear-gradient(to right,transparent 0%,black 8%,black 92%,transparent 100%)" }}>
+        <div className="marquee-left flex w-max">
+          {[...ROW1, ...ROW1].map((b, i) => <BrokerPill key={i} {...b} />)}
+        </div>
+      </div>
+
+      {/* Row 2 — slides right */}
+      <div className="relative" style={{ maskImage:"linear-gradient(to right,transparent 0%,black 8%,black 92%,transparent 100%)", WebkitMaskImage:"linear-gradient(to right,transparent 0%,black 8%,black 92%,transparent 100%)" }}>
+        <div className="marquee-right flex w-max">
+          {[...ROW2, ...ROW2].map((b, i) => <BrokerPill key={i} {...b} />)}
         </div>
       </div>
     </section>
