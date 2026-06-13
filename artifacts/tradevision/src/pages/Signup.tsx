@@ -119,10 +119,16 @@ export default function Signup() {
 
               {/* Social logins */}
               <div className="grid grid-cols-2 gap-2 mb-5">
-                <button className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-accent transition-colors text-sm font-semibold">
+                <button
+                  onClick={() => { window.location.href = "/api/login"; }}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-accent transition-colors text-sm font-semibold"
+                >
                   <GoogleIcon />Continue with Google
                 </button>
-                <button className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-accent transition-colors text-sm font-semibold">
+                <button
+                  onClick={() => { window.location.href = "/api/login"; }}
+                  className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border hover:border-primary/40 hover:bg-accent transition-colors text-sm font-semibold"
+                >
                   <AppleIcon />Continue with Apple
                 </button>
               </div>
@@ -185,7 +191,7 @@ export default function Signup() {
               </div>
 
               <p className="text-[10px] text-muted-foreground text-center mt-4">
-                By signing up, you agree to our <a href="#" className="text-primary">Terms of Service</a> and <a href="#" className="text-primary">Privacy Policy</a>.
+                By signing up, you agree to our <a href="/terms" className="text-primary hover:underline">Terms of Service</a> and <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>.
               </p>
             </div>
           )}

@@ -1,4 +1,5 @@
 import React from "react";
+import { useLocation } from "wouter";
 import { Diamond, TrendingUp, Shield, Zap, Bot, BarChart3, Users, Globe, Lock } from "lucide-react";
 
 function GoogleIcon() {
@@ -21,6 +22,7 @@ function AppleIcon() {
 }
 
 export function LoginGate({ onLogin }: { onLogin: () => void }) {
+  const [, navigate] = useLocation();
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       {/* Left — branding panel */}
@@ -132,7 +134,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-semibold text-foreground">Password</label>
-                <button className="text-xs text-primary hover:underline">Forgot password?</button>
+                <button onClick={() => navigate("/forgot-password")} className="text-xs text-primary hover:underline">Forgot password?</button>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />

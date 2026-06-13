@@ -29,6 +29,8 @@ import CompanyAdminPortal from "@/pages/CompanyAdminPortal";
 import FAQPage from "@/pages/FAQ";
 import BlogPage from "@/pages/Blog";
 import ContactPage from "@/pages/Contact";
+import Legal from "@/pages/Legal";
+import ForgotPassword from "@/pages/ForgotPassword";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +39,11 @@ const queryClient = new QueryClient({
 });
 
 /* Public marketing routes — no auth required */
-const PUBLIC_PATHS = ["/landing", "/faq", "/blog", "/contact", "/signup"];
+const PUBLIC_PATHS = [
+  "/landing", "/faq", "/blog", "/contact", "/signup",
+  "/forgot-password", "/terms", "/privacy", "/cookies",
+  "/risk-disclosure", "/compliance",
+];
 function isPublicPath(path: string) {
   return PUBLIC_PATHS.some(p => path === p || path.startsWith(p + "/"));
 }
@@ -109,6 +115,12 @@ function AuthedRouter() {
       <Route path="/blog" component={BlogPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/signup" component={Signup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/terms" component={Legal} />
+      <Route path="/privacy" component={Legal} />
+      <Route path="/cookies" component={Legal} />
+      <Route path="/risk-disclosure" component={Legal} />
+      <Route path="/compliance" component={Legal} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -122,6 +134,12 @@ function PublicRouter({ login }: { login: () => void }) {
       <Route path="/blog" component={BlogPage} />
       <Route path="/contact" component={ContactPage} />
       <Route path="/signup" component={Signup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/terms" component={Legal} />
+      <Route path="/privacy" component={Legal} />
+      <Route path="/cookies" component={Legal} />
+      <Route path="/risk-disclosure" component={Legal} />
+      <Route path="/compliance" component={Legal} />
       {/* Default: show login gate for all protected routes */}
       <Route>{() => <LoginGate onLogin={login} />}</Route>
     </Switch>

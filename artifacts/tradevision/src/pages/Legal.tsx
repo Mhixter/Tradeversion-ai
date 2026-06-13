@@ -31,16 +31,16 @@ const DOCS: Record<string, { title: string; updated: string; sections: { h: stri
     title: "Terms of Service",
     updated: "January 1, 2026",
     sections: [
-      { h: "1. Acceptance of Terms", body: "By accessing or using TradeVision AI ('Service'), you agree to be bound by these Terms of Service ('Terms'). If you do not agree to these Terms, you may not access or use the Service. These Terms constitute a legally binding agreement between you and TradeVision AI Ltd, a company incorporated in England and Wales." },
-      { h: "2. Description of Service", body: "TradeVision AI provides an automated trading platform that allows users to create, backtest, deploy, and manage algorithmic trading bots across supported third-party broker accounts. The Service includes AI-powered signal generation, copy trading, risk management tools, portfolio analytics, and a marketplace for trading strategies. TradeVision AI is a technology provider only and is not a broker, investment advisor, or financial institution." },
+      { h: "1. Acceptance of Terms", body: "By accessing or using TradeVision AI ('Service'), you agree to be bound by these Terms of Service ('Terms'). If you do not agree to these Terms, you may not access or use the Service. These Terms constitute a legally binding agreement between you and TradeVision AI ('Company', 'we', 'us', or 'our')." },
+      { h: "2. Description of Service", body: "TradeVision AI provides an automated trading platform that allows users to create, backtest, deploy, and manage algorithmic trading bots across supported third-party broker accounts. The Service includes AI-powered signal generation, copy trading, risk management tools, portfolio analytics, and a marketplace for trading strategies. TradeVision AI is a technology provider only and is not a broker, investment advisor, or financial institution. We do not execute trades on your behalf, manage client funds, or provide personalised financial advice." },
       { h: "3. Account Registration", body: "You must register for an account to use the Service. You agree to provide accurate, current, and complete information during registration and to update such information as necessary. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account. You must notify us immediately at security@tradevision.ai of any unauthorized use of your account." },
       { h: "4. Subscription Plans and Billing", body: "Access to certain features requires a paid subscription. Subscription fees are billed in advance on a monthly or annual basis. All fees are non-refundable except as expressly stated in our Refund Policy. We reserve the right to change subscription fees upon 30 days' notice. Failure to pay fees may result in suspension or termination of your account." },
       { h: "5. Prohibited Uses", body: "You agree not to: (a) use the Service for any unlawful purpose; (b) attempt to gain unauthorized access to any portion of the Service; (c) engage in market manipulation or any activity that violates applicable securities laws; (d) reverse engineer, decompile, or disassemble any aspect of the Service; (e) use automated means to access the Service other than through our official API; (f) resell or sublicense the Service without our written consent." },
       { h: "6. Intellectual Property", body: "The Service and all content, features, and functionality are owned by TradeVision AI Ltd and are protected by international copyright, trademark, patent, trade secret, and other intellectual property laws. You are granted a limited, non-exclusive, non-transferable license to use the Service solely for your personal or business trading activities." },
       { h: "7. Disclaimer of Warranties", body: "THE SERVICE IS PROVIDED 'AS IS' AND 'AS AVAILABLE' WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VIRUSES. TRADING INVOLVES SUBSTANTIAL RISK AND TradeVision AI DOES NOT GUARANTEE ANY TRADING RESULTS. PAST PERFORMANCE DOES NOT GUARANTEE FUTURE RESULTS." },
       { h: "8. Limitation of Liability", body: "TO THE MAXIMUM EXTENT PERMITTED BY LAW, TradeVision AI SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, OR TRADING CAPITAL, ARISING FROM YOUR USE OF THE SERVICE. OUR TOTAL LIABILITY SHALL NOT EXCEED THE FEES PAID BY YOU IN THE SIX MONTHS PRECEDING THE CLAIM." },
-      { h: "9. Governing Law", body: "These Terms are governed by the laws of England and Wales. Any disputes shall be resolved in the courts of England and Wales, except where prohibited by applicable law. For EU users, mandatory consumer protection laws of your country of residence may also apply." },
-      { h: "10. Contact", body: "For questions about these Terms, contact us at legal@tradevision.ai or write to TradeVision AI Ltd, 1 Canada Square, Canary Wharf, London E14 5AB, United Kingdom." },
+      { h: "9. Governing Law", body: "These Terms are governed by the laws of the jurisdiction in which the Company is registered. You agree to submit to the exclusive jurisdiction of the courts in that jurisdiction for any dispute arising out of or relating to these Terms or the Service, except where prohibited by applicable law in your country of residence." },
+      { h: "10. Contact", body: "For questions about these Terms, contact our legal team at legal@tradevision.ai. We aim to respond to all legal enquiries within 5 business days." },
     ],
   },
   "/privacy": {
@@ -54,7 +54,7 @@ const DOCS: Record<string, { title: string; updated: string; sections: { h: stri
       { h: "5. Your Rights (GDPR)", body: "If you are in the European Economic Area, you have the right to: access your personal data; correct inaccurate data; request erasure (where not prohibited by law); object to processing; data portability; and withdraw consent. Submit requests to privacy@tradevision.ai. We respond within 30 days." },
       { h: "6. Security", body: "We use AES-256 encryption for data at rest, TLS 1.3 for data in transit, SOC 2 Type II certified infrastructure, multi-factor authentication, and regular third-party security audits. Despite these measures, no system is completely secure and you transmit data at your own risk." },
       { h: "7. Cookies", body: "We use cookies and similar technologies. See our Cookie Policy for details." },
-      { h: "8. Contact", body: "Privacy questions: privacy@tradevision.ai. EU Representative: TradeVision AI EU B.V., Herengracht 420, 1017 BZ Amsterdam, Netherlands." },
+      { h: "8. Contact", body: "For all privacy-related enquiries and data subject requests, contact our Data Protection Officer at privacy@tradevision.ai. We respond to all requests within 30 days as required by applicable data protection law." },
     ],
   },
   "/cookies": {
@@ -87,14 +87,14 @@ const DOCS: Record<string, { title: string; updated: string; sections: { h: stri
     title: "Compliance",
     updated: "January 1, 2026",
     sections: [
-      { h: "Regulatory Status", body: "TradeVision AI Ltd is a technology company incorporated in England and Wales (Company No. 12345678). We provide technology services only and are not authorized or regulated as a financial services provider. We do not provide investment advice, execute trades on our own account, or hold client funds." },
+      { h: "Regulatory Status", body: "TradeVision AI is a technology company. We provide technology services only and are not authorised or regulated as a financial services provider by any financial authority. We do not provide investment advice, execute trades on our own account, or hold client funds. Users are responsible for ensuring their trading activities comply with the financial regulations of their own jurisdiction." },
       { h: "Supported Jurisdictions", body: "Our services are available in most countries. We do not onboard users from countries subject to comprehensive OFAC, EU, or UN sanctions. Users are responsible for ensuring their use of the Service complies with their local laws and regulations." },
       { h: "KYC & AML", body: "We conduct Know Your Customer (KYC) verification for certain account types and transaction thresholds in compliance with anti-money laundering (AML) regulations. Required documents may include government-issued ID, proof of address, and source of funds documentation." },
       { h: "Data Protection", body: "We comply with the UK General Data Protection Regulation (UK GDPR), the EU GDPR, and the California Consumer Privacy Act (CCPA) as applicable. Our Data Protection Officer can be reached at dpo@tradevision.ai." },
       { h: "GDPR", body: "For EU/EEA users, we process personal data under the legal bases of contract performance, legitimate interests, and consent as appropriate. Data is stored in EU-based servers (Ireland, Frankfurt) for EU users. Cross-border transfers comply with Standard Contractual Clauses." },
       { h: "MiFID II", body: "While TradeVision AI is not a MiFID II regulated firm, our enterprise API and institutional tools are designed to support clients who are regulated under MiFID II and need to demonstrate best execution, trade reporting, and audit trail capabilities." },
       { h: "Reporting Concerns", body: "To report compliance concerns, suspicious activity, or potential violations, contact compliance@tradevision.ai. We investigate all reports promptly and confidentially. Whistleblower protections apply." },
-      { h: "Contact", body: "Compliance team: compliance@tradevision.ai · TradeVision AI Ltd, 1 Canada Square, London E14 5AB, UK" },
+      { h: "Contact", body: "Compliance team: compliance@tradevision.ai. We investigate all compliance-related reports promptly and in strict confidence." },
     ],
   },
 };
@@ -157,7 +157,7 @@ export default function Legal() {
       </div>
 
       <footer className="border-t border-border/40 py-8 text-center">
-        <p className="text-xs text-muted-foreground">© 2026 TradeVision AI · <Link href="/terms" className="hover:text-foreground">Terms</Link> · <Link href="/privacy" className="hover:text-foreground">Privacy</Link> · <Link href="/contact" className="hover:text-foreground">Contact</Link></p>
+        <p className="text-xs text-muted-foreground">© 2026 TradeVision AI · <Link href="/terms" className="hover:text-foreground cursor-pointer">Terms</Link> · <Link href="/privacy" className="hover:text-foreground cursor-pointer">Privacy</Link> · <Link href="/contact" className="hover:text-foreground cursor-pointer">Contact</Link></p>
       </footer>
     </div>
   );
