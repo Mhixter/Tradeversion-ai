@@ -347,6 +347,8 @@ function LiveTestPanel({
   const actionColor = signal?.action === "BUY" ? "text-success" : signal?.action === "SELL" ? "text-destructive" : "text-amber-500";
   const noBrokers = !brokersLoading && (!brokers || brokers.length === 0);
 
+  const isSimulated = !activeBroker || activeBroker.balance === 0;
+
   return (
     <Card className="border-primary/30 bg-card shadow-lg sticky top-4">
       {/* Header */}
@@ -371,6 +373,19 @@ function LiveTestPanel({
       </div>
 
       <div className="p-4 flex flex-col gap-4 max-h-[75vh] overflow-y-auto">
+
+        {/* Simulation notice */}
+        {isSimulated && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/8 px-3 py-2.5">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-amber-500">Paper Trading Mode</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
+                No live broker is connected. Connect a real MT4/MT5 account in <strong>Settings → Broker Connections</strong> to execute live trades.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── Step 1: Funded Account ── */}
         <Section icon={<Wallet className="w-3.5 h-3.5" />} title="Funded Account">

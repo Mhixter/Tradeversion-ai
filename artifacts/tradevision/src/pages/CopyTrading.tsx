@@ -462,11 +462,17 @@ export default function CopyTrading() {
     ? filtered.filter((_, i) => i % 3 !== 0)
     : filtered;
 
+  const avgROI = traders?.length
+    ? `+${(traders.reduce((s, t) => s + (t.roi ?? 0), 0) / traders.length).toFixed(1)}%`
+    : "—";
+  const totalCopiers = traders?.reduce((s, t) => s + (t.copiers ?? 0), 0) ?? 0;
+  const verifiedCount = traders?.filter(t => t.isVerified).length ?? 0;
+
   const statCards = [
-    { label: "Total AUM",        value: "$2.84B",  icon: DollarSign, color: "from-primary/20 to-violet-600/5",   num: "text-primary"   },
-    { label: "Avg Trader ROI",   value: "+64.3%",  icon: TrendingUp, color: "from-emerald-600/20 to-green-600/5",num: "text-success"   },
-    { label: "Active Copiers",   value: "142,804", icon: Users,      color: "from-blue-600/20 to-cyan-600/5",    num: "text-blue-400"  },
-    { label: "Verified Traders", value: `${(traders?.length ?? 0)}+`, icon: ShieldCheck, color: "from-amber-600/20 to-yellow-600/5", num: "text-amber-400" },
+    { label: "Platform Traders",  value: `${traders?.length ?? 0}`,    icon: DollarSign,  color: "from-primary/20 to-emerald-600/5",  num: "text-primary"   },
+    { label: "Avg Trader ROI",    value: avgROI,                        icon: TrendingUp,  color: "from-emerald-600/20 to-green-600/5", num: "text-success"   },
+    { label: "Active Copiers",    value: totalCopiers > 0 ? totalCopiers.toLocaleString() : "0", icon: Users, color: "from-cyan-600/20 to-sky-600/5", num: "text-cyan-400" },
+    { label: "Verified Traders",  value: `${verifiedCount}`,            icon: ShieldCheck, color: "from-amber-600/20 to-yellow-600/5", num: "text-amber-400" },
   ];
 
   return (

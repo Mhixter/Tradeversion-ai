@@ -15,7 +15,7 @@ function AnnouncementBar() {
   const [visible, setVisible] = useState(true);
   if (!visible) return null;
   return (
-    <div className="relative bg-gradient-to-r from-primary via-violet-600 to-primary text-white text-xs font-semibold py-2.5 text-center px-8">
+    <div className="relative bg-gradient-to-r from-primary via-emerald-500 to-primary text-primary-foreground text-xs font-semibold py-2.5 text-center px-8">
       <span className="flex items-center justify-center gap-2">
         <Rocket className="w-3.5 h-3.5 shrink-0" />
         New: Gold Hunter AI achieved <strong>+18.4% ROI</strong> this quarter · Connect your MT5 account in minutes.
@@ -199,7 +199,7 @@ function Hero({ onLogin }: { onLogin?: () => void }) {
 
         <h1 className="text-5xl sm:text-7xl lg:text-[88px] font-black tracking-tight mb-6 leading-[0.93] text-balance">
           The AI Trading<br />
-          <span className="bg-gradient-to-r from-primary via-violet-400 to-cyan-400 bg-clip-text text-transparent">Platform for Pros</span>
+          <span className="bg-gradient-to-r from-primary via-lime-400 to-emerald-400 bg-clip-text text-transparent">Platform for Pros</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed text-balance">
@@ -460,7 +460,7 @@ function Features() {
 /* ── Stats bar ─────────────────────────────────────────────────────────────── */
 function Stats() {
   return (
-    <section className="py-16 bg-gradient-to-r from-primary to-violet-700 relative overflow-hidden">
+    <section className="py-16 bg-gradient-to-r from-lime-700 to-emerald-800 relative overflow-hidden">
       <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage:"radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize:"28px 28px" }} />
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-white text-center">
@@ -566,7 +566,7 @@ function Testimonials() {
 
         {/* Featured testimonial — horizontal, full-width */}
         {featured && (
-          <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/8 to-violet-600/5 p-8 sm:p-10 mb-6 flex flex-col sm:flex-row items-center gap-8 shadow-2xl shadow-primary/5">
+          <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/8 to-emerald-600/5 p-8 sm:p-10 mb-6 flex flex-col sm:flex-row items-center gap-8 shadow-2xl shadow-primary/5">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             {/* Large avatar */}
             <div className="relative shrink-0">
