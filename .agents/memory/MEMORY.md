@@ -5,4 +5,5 @@
 - [TradeVision Workflows](tradevision-workflows.md) — Artifact workflows: "artifacts/api-server: API Server" (PORT=8081) and "artifacts/tradevision: web" (dynamic Replit PORT); do NOT hardcode PORT in tradevision dev script.
 - [TradeVision Admin Portal](tradevision-admin.md) — Full admin portal at /company-admin; 10 tabs; billing/live-accounts now DB-driven; support returns []; invite-member fixed for varchar IDs.
 - [TradeVision Mock Data Policy](tradevision-mock-data-policy.md) — All dashboard/analytics/trades routes return 0/empty (not fakes) when no broker configured; execute requires real broker equity.
+- [TradeVision Landing Page](tradevision-landing.md) — Mobile: full-screen 4-step swipeable onboarding (MobileOnboarding, lg:hidden); Desktop: full landing (hidden lg:block). No violet/purple anywhere; all primary=lemon-green.
 - [Replit Artifact Dynamic Port](replit-artifact-port.md) — Replit artifact workflows inject PORT dynamically; hardcoding PORT in the dev script causes 502. Never override PORT in artifact dev scripts.

@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Diamond, Search, BookOpen, Code2, Zap, Bot, TrendingUp, Shield, BarChart2, Copy, ChevronRight, ArrowRight, Terminal, Globe } from "lucide-react";
+import { Search, BookOpen, Code2, Zap, Bot, TrendingUp, Shield, BarChart2, Copy, ChevronRight, ArrowRight, Terminal, Globe } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center shadow-md shadow-primary/25">
-            <Diamond className="w-3.5 h-3.5 text-white" />
-          </div>
+          <LogoIcon size={28} />
           <span className="font-black text-sm">TradeVision AI</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
@@ -33,7 +32,7 @@ const PLATFORM_SECTIONS = [
     articles: ["Bot Types Overview", "Creating a Custom Bot", "Bot Parameters Explained", "Start / Stop / Pause Bots", "Bot Performance Analytics", "Risk Limits per Bot"],
   },
   {
-    icon: TrendingUp, title: "Strategy Builder", color: "text-violet-400 bg-violet-400/10",
+    icon: TrendingUp, title: "Strategy Builder", color: "text-primary bg-primary/10",
     articles: ["Visual Node Editor", "Technical Indicators Library", "Entry & Exit Conditions", "Position Sizing Rules", "Backtesting Your Strategy", "Exporting to Live"],
   },
   {

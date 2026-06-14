@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
+import { LogoIcon } from "@/components/Logo";
 import {
-  Diamond, ChevronDown, Search, HelpCircle, Bot, Shield, CreditCard,
+  ChevronDown, Search, HelpCircle, Bot, Shield, CreditCard,
   Wifi, Code2, BookOpen, ArrowRight, MessageCircle, Mail, Phone, Zap,
 } from "lucide-react";
 
@@ -49,9 +50,7 @@ function NavBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing">
           <div className="flex items-center gap-2.5 cursor-pointer">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Diamond className="w-3.5 h-3.5 text-white" />
-            </div>
+            <LogoIcon size={28} />
             <span className="font-black text-sm">TradeVision AI</span>
           </div>
         </Link>

@@ -102,7 +102,7 @@ export default function Dashboard() {
                 )}
               </div>
               <div className="flex items-center gap-4 mt-2 px-1">
-                <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-indigo-500 rounded-full inline-block" /><span className="text-[10px] text-muted-foreground">Portfolio</span></div>
+                <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-primary rounded-full inline-block" /><span className="text-[10px] text-muted-foreground">Portfolio</span></div>
                 <div className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-emerald-500 rounded-full inline-block border-dashed" /><span className="text-[10px] text-muted-foreground">Buy &amp; Hold</span></div>
               </div>
             </CardContent>

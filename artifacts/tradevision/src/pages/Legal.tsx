@@ -1,15 +1,14 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { Diamond, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center shadow-md shadow-primary/25">
-            <Diamond className="w-3.5 h-3.5 text-white" />
-          </div>
+          <LogoIcon size={28} />
           <span className="font-black text-sm">TradeVision AI</span>
         </Link>
         <Link href="/signup" className="text-sm px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors">Start Free</Link>

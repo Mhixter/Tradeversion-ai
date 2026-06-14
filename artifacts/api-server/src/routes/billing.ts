@@ -166,4 +166,67 @@ router.post("/billing/upgrade", async (req, res) => {
   }
 });
 
+// POST /api/billing/checkout — create Stripe checkout session
+router.post("/billing/checkout", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (!process.env.STRIPE_SECRET_KEY) {
+    res.status(503).json({ error: "Payment gateway not yet configured. Please set STRIPE_SECRET_KEY." });
+    return;
+  }
+  const { plan, billingCycle } = req.body;
+  const planData = PLANS.find(p => p.id === plan);
+  if (!planData || !planData.price) {
+    res.status(400).json({ error: "Invalid plan or contact sales required" });
+    return;
+  }
+  try {
+    const { default: Stripe } = await import("stripe");
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    const isAnnual = billingCycle === "annual";
+    const unitAmount = isAnnual ? Math.round(planData.price * 10 * 0.8) : planData.price;
+    const origin = req.headers.origin ?? "https://tradevision.ai";
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "subscription",
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          product_data: { name: `TradeVision ${planData.name} Plan` },
+          unit_amount: unitAmount,
+          recurring: { interval: isAnnual ? "year" : "month" },
+        },
+        quantity: 1,
+      }],
+      success_url: `${origin}/billing?success=true&plan=${plan}`,
+      cancel_url:  `${origin}/billing`,
+      metadata:    { userId: req.user.id, plan, billingCycle: billingCycle ?? "monthly" },
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to create checkout session" });
+  }
+});
+
+// POST /api/billing/cancel — cancel subscription at period end
+router.post("/billing/cancel", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    await db
+      .update(subscriptionsTable)
+      .set({ cancelAtPeriodEnd: true, updatedAt: new Date() })
+      .where(eq(subscriptionsTable.userId, req.user.id));
+    res.json({ success: true, cancelAtPeriodEnd: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to cancel subscription" });
+  }
+});
+
 export default router;

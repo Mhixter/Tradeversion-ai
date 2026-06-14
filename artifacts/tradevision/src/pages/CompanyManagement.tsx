@@ -29,7 +29,7 @@ const RC: Record<Role, {
   pill: string; ring: string; glow: string;
   headerBg: string; dot: string;
 }> = {
-  Owner:   { icon: Crown,     description: "Full platform access, billing & company settings",         pill: "bg-gradient-to-r from-purple-600 to-violet-500 text-white",          ring: "ring-purple-500/60",  glow: "shadow-purple-500/20",  headerBg: "from-purple-600/20 to-violet-600/5",  dot: "bg-purple-400"  },
+  Owner:   { icon: Crown,     description: "Full platform access, billing & company settings",         pill: "bg-gradient-to-r from-primary to-lime-500 text-primary-foreground",   ring: "ring-primary/60",     glow: "shadow-primary/20",    headerBg: "from-primary/20 to-lime-600/5",       dot: "bg-primary"     },
   Admin:   { icon: Shield,    description: "Manage team, bots & strategies. No billing access",        pill: "bg-gradient-to-r from-red-600 to-rose-500 text-white",               ring: "ring-red-500/60",     glow: "shadow-red-500/20",     headerBg: "from-red-600/20 to-rose-600/5",       dot: "bg-red-400"     },
   Manager: { icon: Settings,  description: "View all data, manage assigned bots & strategies",        pill: "bg-gradient-to-r from-blue-600 to-cyan-500 text-white",              ring: "ring-blue-500/60",    glow: "shadow-blue-500/20",    headerBg: "from-blue-600/20 to-cyan-600/5",      dot: "bg-blue-400"    },
   Trader:  { icon: TrendingUp, description: "Execute trades, manage own bots & strategies only",      pill: "bg-gradient-to-r from-emerald-600 to-green-500 text-white",          ring: "ring-emerald-500/60", glow: "shadow-emerald-500/20", headerBg: "from-emerald-600/20 to-green-600/5",  dot: "bg-emerald-400" },
@@ -129,7 +129,7 @@ function InviteModal({ onClose, onInvite }: { onClose: () => void; onInvite: (em
         onClick={e => e.stopPropagation()}
       >
         {/* Modal header */}
-        <div className="relative px-6 py-5 border-b border-border/50 bg-gradient-to-r from-primary/10 to-purple-600/5">
+        <div className="relative px-6 py-5 border-b border-border/50 bg-gradient-to-r from-primary/10 to-emerald-600/5">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
               <UserPlus className="w-4 h-4 text-primary" />
@@ -386,7 +386,7 @@ export default function CompanyManagement() {
     return (
       <Layout title="Company" subtitle="Set up your organization to manage your team">
         <div className="flex flex-col items-center justify-center py-24 max-w-md mx-auto text-center gap-6">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-2xl shadow-primary/30">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-2xl shadow-primary/30">
             <Building2 className="w-10 h-10 text-white" />
           </div>
           <div>
@@ -434,13 +434,13 @@ export default function CompanyManagement() {
         {/* ── Hero banner ────────────────────────────────────────────────── */}
         <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card">
           {/* gradient backdrop */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-purple-700/10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-emerald-700/10 pointer-events-none" />
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-5">
             {/* Logo */}
             <div className="relative shrink-0">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center shadow-xl shadow-primary/30">
                 <Building2 className="w-8 h-8 text-white" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-card flex items-center justify-center">
@@ -491,7 +491,7 @@ export default function CompanyManagement() {
         {/* ── Stats ──────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label:"Total Members",  value:stats.total,   icon:Users,        from:"from-primary/20",   to:"to-violet-600/5",  iconColor:"text-primary",  numColor:"text-primary"  },
+            { label:"Total Members",  value:stats.total,   icon:Users,        from:"from-primary/20",   to:"to-lime-600/5",    iconColor:"text-primary",  numColor:"text-primary"  },
             { label:"Active Members", value:stats.active,  icon:CheckCircle2, from:"from-emerald-600/20",to:"to-green-600/5",  iconColor:"text-success",  numColor:"text-success"  },
             { label:"Pending Invites",value:stats.pending, icon:Clock,        from:"from-amber-600/20", to:"to-yellow-600/5",  iconColor:"text-amber-400",numColor:"text-amber-400"},
             { label:"Bots Running",   value:stats.bots,    icon:Bot,          from:"from-cyan-600/20",  to:"to-sky-600/5",     iconColor:"text-cyan-400", numColor:"text-cyan-400" },
@@ -847,11 +847,11 @@ export default function CompanyManagement() {
                 <div className="space-y-5">
                   {ACTIVITY.map(log => {
                     const typeStyles: Record<string, { bg: string; color: string; icon: React.ElementType }> = {
-                      role:     { bg:"bg-blue-500/15",    color:"text-blue-400",    icon: Edit2       },
+                      role:     { bg:"bg-primary/15",     color:"text-primary",     icon: Edit2       },
                       invite:   { bg:"bg-primary/15",     color:"text-primary",     icon: UserPlus    },
                       suspend:  { bg:"bg-amber-500/15",   color:"text-amber-400",   icon: AlertTriangle},
                       create:   { bg:"bg-success/15",     color:"text-success",     icon: CheckCircle2},
-                      settings: { bg:"bg-purple-500/15",  color:"text-purple-400",  icon: Settings    },
+                      settings: { bg:"bg-emerald-500/15", color:"text-emerald-400", icon: Settings    },
                       join:     { bg:"bg-cyan-500/15",    color:"text-cyan-400",    icon: Users       },
                     };
                     const ts = typeStyles[log.type] ?? typeStyles.join;

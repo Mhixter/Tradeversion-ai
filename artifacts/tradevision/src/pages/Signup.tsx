@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
+import { LogoIcon } from "@/components/Logo";
 import {
-  Diamond, ArrowRight, Check, Eye, EyeOff,
+  ArrowRight, Check, Eye, EyeOff,
   Mail, Lock, User, ChevronLeft, Zap, Shield, Bot, Users,
   CheckCircle2, ArrowLeft,
 } from "lucide-react";
@@ -77,9 +78,7 @@ export default function Signup() {
       <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border/40">
         <Link href="/landing">
           <div className="flex items-center gap-2 cursor-pointer">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <Diamond className="w-3.5 h-3.5 text-white" />
-            </div>
+            <LogoIcon size={28} />
             <span className="text-sm font-bold">TradeVision AI</span>
           </div>
         </Link>

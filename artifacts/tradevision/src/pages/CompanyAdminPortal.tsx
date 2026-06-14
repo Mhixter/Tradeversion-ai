@@ -109,7 +109,7 @@ function LoginPage({ onLogin }: { onLogin: (s: any) => void }) {
     <div className="min-h-screen bg-[#0a0b0f] flex items-center justify-center p-4">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-violet-600/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-md">
@@ -121,10 +121,10 @@ function LoginPage({ onLogin }: { onLogin: (s: any) => void }) {
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-2xl">
-          <div className="h-1 bg-gradient-to-r from-primary via-violet-500 to-purple-600" />
+          <div className="h-1 bg-gradient-to-r from-primary via-lime-400 to-emerald-500" />
           <div className="p-8">
             <div className="flex flex-col items-center mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center mb-4 shadow-lg shadow-primary/30">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center mb-4 shadow-lg shadow-primary/30">
                 <Shield className="w-7 h-7 text-white" />
               </div>
               <h1 className="text-xl font-bold">TradeVision Admin</h1>
@@ -335,7 +335,7 @@ function BillingTab() {
           </div>
           <div className="p-5 space-y-3">
             {data.plans.map((p: any) => {
-              const colorMap: Record<string, string> = { blue: "bg-blue-500", violet: "bg-violet-500", amber: "bg-amber-500" };
+              const colorMap: Record<string, string> = { blue: "bg-primary", violet: "bg-primary", amber: "bg-amber-500" };
               const total = data.plans.reduce((s: number, x: any) => s + x.subscribers, 0) || 1;
               const pct = Math.round((p.subscribers / total) * 100);
               return (
@@ -396,7 +396,7 @@ function BillingTab() {
 
 /* ── Payment Gateway Config Component ───────────────────────────────────── */
 const GATEWAYS_DEFAULT = [
-  { name: "Stripe", status: "active",   logo: "S", color: "bg-violet-500", fields: [{ key: "publishable_key", label: "Publishable Key", placeholder: "pk_live_..." }, { key: "secret_key", label: "Secret Key", placeholder: "sk_live_..." }, { key: "webhook_secret", label: "Webhook Secret", placeholder: "whsec_..." }] },
+  { name: "Stripe", status: "active",   logo: "S", color: "bg-emerald-600", fields: [{ key: "publishable_key", label: "Publishable Key", placeholder: "pk_live_..." }, { key: "secret_key", label: "Secret Key", placeholder: "sk_live_..." }, { key: "webhook_secret", label: "Webhook Secret", placeholder: "whsec_..." }] },
   { name: "PayPal", status: "inactive", logo: "P", color: "bg-blue-500",   fields: [{ key: "client_id", label: "Client ID", placeholder: "AXxx..." }, { key: "client_secret", label: "Client Secret", placeholder: "EXxx..." }] },
   { name: "Crypto", status: "inactive", logo: "₿", color: "bg-amber-500",  fields: [{ key: "api_key", label: "API Key", placeholder: "Your crypto gateway API key" }, { key: "webhook_url", label: "Webhook URL", placeholder: "https://..." }] },
 ];
@@ -466,7 +466,7 @@ function PaymentGatewayConfig() {
       {configuring && activeGw && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-primary via-violet-500 to-purple-600" />
+            <div className="h-1 bg-gradient-to-r from-primary via-lime-400 to-emerald-500" />
             <div className="p-6">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
@@ -645,7 +645,7 @@ function LiveAccountsTab() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard label="Total Accounts" value={accounts.length}           icon={Wallet}     color="bg-primary/10 text-primary" />
         <StatCard label="Active"         value={active}                    icon={CheckCircle} color="bg-emerald-500/10 text-emerald-400" />
-        <StatCard label="Total Balance"  value={`$${totalBalance.toLocaleString(undefined,{maximumFractionDigits:0})}`} icon={DollarSign} color="bg-violet-500/10 text-violet-400" />
+        <StatCard label="Total Balance"  value={`$${totalBalance.toLocaleString(undefined,{maximumFractionDigits:0})}`} icon={DollarSign} color="bg-primary/10 text-primary" />
         <StatCard label="Total P&L"      value={`${totalPnl >= 0 ? "+" : ""}$${totalPnl.toLocaleString(undefined,{maximumFractionDigits:0})}`} icon={totalPnl >= 0 ? TrendingUp : TrendingDown} color={totalPnl >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"} />
       </div>
 
@@ -778,8 +778,8 @@ function RolesTab() {
 
   const colorMap: Record<string, string> = {
     amber:  "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    violet: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-    blue:   "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    violet: "bg-primary/10 text-primary border-primary/20",
+    blue:   "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
     green:  "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
     gray:   "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
   };
@@ -891,7 +891,7 @@ function RolesTab() {
               {data.members.slice(0, 10).map((m: any) => (
                 <div key={m.id} className="flex items-center justify-between px-5 py-3 hover:bg-accent/20 transition-colors">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-violet-600/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-emerald-600/10 flex items-center justify-center text-[10px] font-bold text-primary">
                       {m.id}
                     </div>
                     <div>
@@ -1143,9 +1143,9 @@ function OverviewTab({ stats, companies, users, setTab }: { stats: any; companie
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <StatCard label="Companies"    value={stats.totalCompanies}   icon={Building2}  color="bg-primary/10 text-primary" />
-          <StatCard label="Users"        value={stats.totalUsers}       icon={Users}      color="bg-blue-500/10 text-blue-400" />
+          <StatCard label="Users"        value={stats.totalUsers}       icon={Users}      color="bg-primary/10 text-primary" />
           <StatCard label="Active Bots"  value={stats.runningBots}      icon={Bot}        color="bg-emerald-500/10 text-emerald-400" sub={`of ${stats.totalBots} total`} />
-          <StatCard label="Revenue/mo"   value={`$${(stats.totalRevenue ?? 0).toLocaleString()}`} icon={DollarSign} color="bg-violet-500/10 text-violet-400" />
+          <StatCard label="Revenue/mo"   value={`$${(stats.totalRevenue ?? 0).toLocaleString()}`} icon={DollarSign} color="bg-primary/10 text-primary" />
           <StatCard label="Open Tickets" value={stats.openTickets}      icon={HeadphonesIcon} color="bg-amber-500/10 text-amber-400" />
         </div>
       )}
@@ -1157,10 +1157,10 @@ function OverviewTab({ stats, companies, users, setTab }: { stats: any; companie
           <div className="space-y-2">
             {[
               { label: "Manage All Bots",    tab: "bots"     as AdminTab, icon: Bot,           color: "text-primary" },
-              { label: "Billing & Payments", tab: "billing"  as AdminTab, icon: CreditCard,    color: "text-violet-400" },
+              { label: "Billing & Payments", tab: "billing"  as AdminTab, icon: CreditCard,    color: "text-primary" },
               { label: "Support Tickets",    tab: "support"  as AdminTab, icon: HeadphonesIcon, color: "text-amber-400" },
               { label: "Live Accounts",      tab: "accounts" as AdminTab, icon: Wallet,        color: "text-emerald-400" },
-              { label: "Role Management",    tab: "roles"    as AdminTab, icon: Shield,         color: "text-blue-400" },
+              { label: "Role Management",    tab: "roles"    as AdminTab, icon: Shield,         color: "text-emerald-400" },
             ].map(a => (
               <button key={a.tab} onClick={() => setTab(a.tab)}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-accent/40 hover:bg-accent transition-colors text-left group">
@@ -1183,7 +1183,7 @@ function OverviewTab({ stats, companies, users, setTab }: { stats: any; companie
           <div className="divide-y divide-border/40">
             {companies.slice(0, 5).map((c: any) => (
               <div key={c.id} className="flex items-center gap-3 px-5 py-3 hover:bg-accent/20 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-violet-600/10 flex items-center justify-center text-xs font-bold text-primary">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-600/10 flex items-center justify-center text-xs font-bold text-primary">
                   {c.name?.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -1278,7 +1278,7 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
       {/* Top nav */}
       <header className="sticky top-0 z-30 h-14 border-b border-border bg-card/80 backdrop-blur-md px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center">
             <Shield className="w-4 h-4 text-white" />
           </div>
           <div>
@@ -1361,7 +1361,7 @@ function AdminDashboard({ session, onLogout }: { session: any; onLogout: () => v
                   <tr key={c.id} className="border-b border-border/30 hover:bg-accent/10 transition-colors">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-violet-600/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-600/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                           {c.name?.slice(0, 2).toUpperCase()}
                         </div>
                         <span className="text-xs font-semibold">{c.name}</span>

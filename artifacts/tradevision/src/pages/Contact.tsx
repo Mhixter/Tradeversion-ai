@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
+import { LogoIcon } from "@/components/Logo";
 import {
-  Diamond, Mail, MessageCircle, Phone, MapPin, Clock, CheckCircle2,
+  Mail, MessageCircle, Phone, MapPin, Clock, CheckCircle2,
   Send, ArrowRight, Building2, HelpCircle, Bot, Briefcase, Zap,
   ChevronRight, Twitter, Linkedin, Youtube,
 } from "lucide-react";
@@ -32,9 +33,7 @@ function NavBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing">
           <div className="flex items-center gap-2.5 cursor-pointer">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Diamond className="w-3.5 h-3.5 text-white" />
-            </div>
+            <LogoIcon size={28} />
             <span className="font-black text-sm">TradeVision AI</span>
           </div>
         </Link>
@@ -202,7 +201,7 @@ export default function ContactPage() {
               <div className="space-y-2">
                 {[
                   { label:"Browse FAQ",           href:"/faq",     icon: HelpCircle },
-                  { label:"Read Documentation",    href:"#",        icon: Diamond    },
+                  { label:"Read Documentation",    href:"#",        icon: BookOpen   },
                   { label:"View System Status",    href:"#",        icon: Zap        },
                   { label:"Watch Tutorial Videos", href:"#",        icon: Bot        },
                 ].map(l => (
@@ -245,9 +244,7 @@ export default function ContactPage() {
       <footer className="border-t border-border/40 py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-              <Diamond className="w-3 h-3 text-white" />
-            </div>
+            <LogoIcon size={24} />
             <span className="text-sm font-bold">TradeVision AI</span>
           </div>
           <div className="flex gap-4">

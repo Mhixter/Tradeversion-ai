@@ -1,15 +1,14 @@
 import React from "react";
 import { Link } from "wouter";
-import { Diamond, ArrowRight, CheckCircle, Globe, TrendingUp, Users, Zap, Award, BarChart2, Building2 } from "lucide-react";
+import { ArrowRight, CheckCircle, Globe, TrendingUp, Users, Zap, Award, BarChart2, Building2 } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center shadow-md shadow-primary/25">
-            <Diamond className="w-3.5 h-3.5 text-white" />
-          </div>
+          <LogoIcon size={28} />
           <span className="font-black text-sm">TradeVision AI</span>
         </Link>
         <div className="flex items-center gap-3">
@@ -39,8 +38,8 @@ const TIERS = [
   },
   {
     name: "Platinum Partner",
-    color: "border-violet-500/30 bg-violet-500/5",
-    badge: "text-violet-400",
+    color: "border-primary/30 bg-primary/5",
+    badge: "text-primary",
     req: "500+ referred active accounts",
     perks: ["35% revenue share", "Full white-label platform", "Equity consideration", "Engineering resources", "Custom integrations", "C-suite access", "Joint GTM strategy"],
   },

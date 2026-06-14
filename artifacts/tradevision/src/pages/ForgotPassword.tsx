@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { Diamond, Mail, ArrowLeft, RefreshCw, CheckCircle2, KeyRound, AlertCircle } from "lucide-react";
+import { Mail, ArrowLeft, RefreshCw, CheckCircle2, KeyRound, AlertCircle } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 type State = "form" | "sent" | "resent";
 
@@ -35,9 +36,7 @@ export default function ForgotPassword() {
       <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border/40">
         <Link href="/landing">
           <div className="flex items-center gap-2 cursor-pointer">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-              <Diamond className="w-3.5 h-3.5 text-white" />
-            </div>
+            <LogoIcon size={28} />
             <span className="text-sm font-bold">TradeVision AI</span>
           </div>
         </Link>

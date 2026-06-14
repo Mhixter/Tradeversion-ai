@@ -21,7 +21,7 @@ type FilterTab = "all" | "unread" | "trading" | "risk" | "system" | "security";
 const TYPE_META: Record<string, { icon: React.ElementType; color: string; bg: string; label: string; severity: string }> = {
   risk:     { icon: AlertTriangle,  color: "text-amber-400",     bg: "bg-amber-500/10 border-amber-500/20",    label: "Risk",     severity: "high" },
   bot:      { icon: Bot,            color: "text-emerald-400",   bg: "bg-emerald-500/10 border-emerald-500/20", label: "Bot",      severity: "info" },
-  trade:    { icon: TrendingUp,     color: "text-blue-400",      bg: "bg-blue-500/10 border-blue-500/20",      label: "Trade",    severity: "info" },
+  trade:    { icon: TrendingUp,     color: "text-primary",       bg: "bg-primary/10 border-primary/20",        label: "Trade",    severity: "info" },
   system:   { icon: Settings,       color: "text-slate-400",     bg: "bg-slate-500/10 border-slate-500/20",    label: "System",   severity: "low" },
   account:  { icon: ArrowRightLeft, color: "text-emerald-400",   bg: "bg-emerald-500/10 border-emerald-500/20", label: "Account", severity: "info" },
   security: { icon: ShieldAlert,    color: "text-red-400",       bg: "bg-red-500/10 border-red-500/20",        label: "Security", severity: "critical" },
@@ -276,7 +276,7 @@ export default function Notifications() {
                                     </button>
                                   )}
                                   {n.type === "trade" && (
-                                    <button className="text-[10px] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                                    <button className="text-[10px] text-primary hover:text-primary/80 font-medium flex items-center gap-1">
                                       View Trade <ChevronRight className="w-3 h-3" />
                                     </button>
                                   )}
@@ -330,7 +330,7 @@ export default function Notifications() {
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: "Total Unread", value: summary?.unread ?? 0, color: "bg-primary/10 text-primary border-primary/20" },
-                      { label: "Trading", value: summary?.trading ?? 0, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+                      { label: "Trading", value: summary?.trading ?? 0, color: "bg-primary/10 text-primary border-primary/20" },
                       { label: "Risk", value: summary?.risk ?? 0, color: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
                       { label: "Security", value: summary?.security ?? 0, color: "bg-red-500/10 text-red-400 border-red-500/20" },
                     ].map(item => (

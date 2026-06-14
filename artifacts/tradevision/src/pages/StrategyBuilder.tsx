@@ -157,7 +157,7 @@ interface CanvasNode {
 
 const NODE_COLORS: Record<NodeType, string> = {
   data: "border-border bg-card",
-  indicator: "border-blue-500/50 bg-blue-500/10",
+  indicator: "border-cyan-500/50 bg-cyan-500/10",
   ai: "border-primary/60 bg-primary/10",
   signal: "border-success/60 bg-success/10",
   risk: "border-amber-500/50 bg-amber-500/10",
@@ -166,7 +166,7 @@ const NODE_COLORS: Record<NodeType, string> = {
 
 const NODE_LABEL_COLORS: Record<NodeType, string> = {
   data: "text-foreground",
-  indicator: "text-blue-400",
+  indicator: "text-cyan-400",
   ai: "text-primary",
   signal: "text-success",
   risk: "text-amber-400",

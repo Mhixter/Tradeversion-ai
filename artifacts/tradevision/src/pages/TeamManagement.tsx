@@ -28,8 +28,8 @@ interface StaffMember {
 
 const ROLES: { value: StaffRole; label: string; color: string }[] = [
   { value: "founder",   label: "Founder",   color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
-  { value: "manager",   label: "Manager",   color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
-  { value: "developer", label: "Developer", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+  { value: "manager",   label: "Manager",   color: "bg-primary/10 text-primary border-primary/20" },
+  { value: "developer", label: "Developer", color: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" },
   { value: "analyst",   label: "Analyst",   color: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20" },
   { value: "support",   label: "Support",   color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" },
 ];
@@ -38,7 +38,7 @@ const DEPARTMENTS = ["Engineering", "Product", "Support", "Operations", "Analyti
 
 const STATUS_CONFIG: Record<StaffStatus, { icon: React.ElementType; label: string; color: string }> = {
   active:   { icon: CheckCircle2, label: "Active",   color: "text-emerald-500" },
-  invited:  { icon: Clock,        label: "Invited",  color: "text-blue-500" },
+  invited:  { icon: Clock,        label: "Invited",  color: "text-primary" },
   inactive: { icon: XCircle,      label: "Inactive", color: "text-muted-foreground" },
 };
 
@@ -265,8 +265,8 @@ export default function TeamManagement() {
           {[
             { label: "Total Staff",    value: stats.total,   color: "text-foreground" },
             { label: "Active",         value: stats.active,  color: "text-emerald-500" },
-            { label: "Pending Invite", value: stats.invited, color: "text-blue-500" },
-            { label: "Departments",    value: stats.byDept.length, color: "text-purple-500" },
+            { label: "Pending Invite", value: stats.invited, color: "text-primary" },
+            { label: "Departments",    value: stats.byDept.length, color: "text-emerald-500" },
           ].map(s => (
             <Card key={s.label}>
               <CardContent className="p-4">

@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { Diamond, Download, TrendingUp, BarChart2, Globe, Search, Calendar, FileText, ArrowRight, Mail } from "lucide-react";
+import { Download, TrendingUp, BarChart2, Globe, Search, Calendar, FileText, ArrowRight, Mail } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center shadow-md shadow-primary/25">
-            <Diamond className="w-3.5 h-3.5 text-white" />
-          </div>
+          <LogoIcon size={28} />
           <span className="font-black text-sm">TradeVision AI</span>
         </Link>
         <div className="flex items-center gap-3">
@@ -38,7 +37,7 @@ const REPORTS = [
     topics: ["Adoption of AI tools by trader type", "Capital allocation shifts", "Risk management practices", "Technology spending trends"],
   },
   {
-    tag: "BROKER REPORT", tagColor: "text-violet-400 bg-violet-400/10 border-violet-400/20",
+    tag: "BROKER REPORT", tagColor: "text-primary bg-primary/10 border-primary/20",
     title: "Multi-Broker Execution Quality 2026",
     summary: "Independent analysis of execution quality, slippage, and spread costs across 20 major brokers integrated with TradeVision AI platforms.",
     date: "February 18, 2026", pages: 32, icon: Globe,
@@ -108,7 +107,7 @@ export default function MarketReports() {
       {/* Featured report */}
       {featured && !search && cat === "All" && (
         <section className="py-12 max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/8 to-violet-600/5 p-8 sm:p-10">
+          <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/8 to-emerald-600/5 p-8 sm:p-10">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             <div className="flex flex-col sm:flex-row gap-8 items-start">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">

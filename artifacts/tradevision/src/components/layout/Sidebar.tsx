@@ -3,8 +3,9 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, GitBranch, Bot, Store, LineChart, Users,
   PieChart, ShieldAlert, Bell, Settings, Moon, Sun, X,
-  Diamond, Building2, CreditCard, Shield, LogOut, Crown, UserCog,
+  Building2, CreditCard, Shield, LogOut, Crown, UserCog,
 } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@workspace/replit-auth-web";
@@ -67,9 +68,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Logo */}
       <div className="px-4 py-4 flex items-center justify-between border-b border-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center shrink-0">
-            <Diamond className="w-4 h-4 text-white" />
-          </div>
+          <LogoIcon size={28} />
           <span className="text-sm font-bold text-foreground truncate">TradeVision</span>
         </div>
         {onClose && (

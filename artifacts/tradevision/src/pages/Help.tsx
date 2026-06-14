@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { Diamond, Search, MessageCircle, BookOpen, Zap, Shield, Bot, TrendingUp, BarChart2, Globe, ChevronDown, ChevronRight, Mail, Clock, PhoneCall } from "lucide-react";
+import { Search, MessageCircle, BookOpen, Zap, Shield, Bot, TrendingUp, BarChart2, Globe, ChevronDown, ChevronRight, Mail, Clock, PhoneCall } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center shadow-md shadow-primary/25">
-            <Diamond className="w-3.5 h-3.5 text-white" />
-          </div>
+          <LogoIcon size={28} />
           <span className="font-black text-sm">TradeVision AI</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
@@ -26,7 +25,7 @@ function Nav() {
 const CATEGORIES = [
   { icon: Zap,       title: "Getting Started",    count: 12, color: "text-emerald-400 bg-emerald-400/10" },
   { icon: Bot,       title: "Trading Bots",       count: 18, color: "text-primary bg-primary/10" },
-  { icon: TrendingUp, title: "Strategy Builder",  count: 15, color: "text-violet-400 bg-violet-400/10" },
+  { icon: TrendingUp, title: "Strategy Builder",  count: 15, color: "text-primary bg-primary/10" },
   { icon: Globe,     title: "Broker Connection",  count: 22, color: "text-cyan-400 bg-cyan-400/10" },
   { icon: Shield,    title: "Security & Account", count: 10, color: "text-amber-400 bg-amber-400/10" },
   { icon: BarChart2, title: "Analytics & Reports", count: 9, color: "text-rose-400 bg-rose-400/10" },

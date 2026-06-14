@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { Diamond, ArrowRight, Clock, Tag, TrendingUp, Bot, Shield, BookOpen, Cpu, Users, Globe, ChevronRight, Search } from "lucide-react";
+import { ArrowRight, Clock, Tag, TrendingUp, Bot, Shield, BookOpen, Cpu, Users, Globe, ChevronRight, Search } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 const CATEGORIES = ["All","AI Trading","Strategy","Risk Management","Brokers","Market Analysis","Platform Updates"];
 
@@ -85,9 +86,7 @@ function NavBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/landing">
           <div className="flex items-center gap-2.5 cursor-pointer">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Diamond className="w-3.5 h-3.5 text-white" />
-            </div>
+            <LogoIcon size={28} />
             <span className="font-black text-sm">TradeVision AI</span>
           </div>
         </Link>
@@ -228,7 +227,7 @@ export default function BlogPage() {
 
         {/* Newsletter CTA */}
         {!search && (
-          <div className="mt-16 rounded-3xl bg-gradient-to-r from-primary/10 to-violet-600/10 border border-primary/20 p-8 sm:p-12 text-center">
+          <div className="mt-16 rounded-3xl bg-gradient-to-r from-primary/10 to-emerald-600/10 border border-primary/20 p-8 sm:p-12 text-center">
             <h3 className="text-2xl font-black mb-2">Stay Ahead of the Markets</h3>
             <p className="text-muted-foreground text-sm mb-6">Weekly AI trading insights, strategy breakdowns, and platform updates delivered to your inbox.</p>
             <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto justify-center">
@@ -246,9 +245,7 @@ export default function BlogPage() {
       <footer className="border-t border-border/40 py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
-              <Diamond className="w-3 h-3 text-white" />
-            </div>
+            <LogoIcon size={24} />
             <span className="text-sm font-bold">TradeVision AI</span>
           </div>
           <div className="flex gap-4">

@@ -131,7 +131,6 @@ function AuthedRouter() {
 function PublicRouter({ login }: { login: () => void }) {
   return (
     <Switch>
-      <Route path="/landing">{() => <Landing onLogin={login} />}</Route>
       <Route path="/faq" component={FAQPage} />
       <Route path="/blog" component={BlogPage} />
       <Route path="/contact" component={ContactPage} />
@@ -142,8 +141,8 @@ function PublicRouter({ login }: { login: () => void }) {
       <Route path="/cookies" component={Legal} />
       <Route path="/risk-disclosure" component={Legal} />
       <Route path="/compliance" component={Legal} />
-      {/* Default: show login gate for all protected routes */}
-      <Route>{() => <LoginGate onLogin={login} />}</Route>
+      {/* Default: show full landing page for all unauthenticated routes */}
+      <Route>{() => <Landing onLogin={login} />}</Route>
     </Switch>
   );
 }

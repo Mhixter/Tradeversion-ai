@@ -1,8 +1,9 @@
 import React from "react";
 import {
-  Diamond, Shield, Zap, BarChart3, Bot, Users, Globe,
+  Shield, Zap, BarChart3, Bot, Users, Globe,
   TrendingUp, Activity, CheckCircle2,
 } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
 
 export function LoginGate({ onLogin }: { onLogin: () => void }) {
   return (
@@ -13,9 +14,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
 
         {/* Logo */}
         <div className="flex items-center gap-2.5 relative z-10">
-          <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-            <Diamond className="w-5 h-5 text-white" />
-          </div>
+          <LogoIcon size={36} />
           <span className="text-white font-black text-lg tracking-tight">TradeVision AI</span>
         </div>
 
@@ -67,9 +66,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 min-h-screen lg:min-h-0">
         {/* Mobile logo */}
         <div className="flex items-center gap-2 mb-10 lg:hidden">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Diamond className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <LogoIcon size={32} />
           <span className="font-black text-base">TradeVision AI</span>
         </div>
 

@@ -39,14 +39,14 @@ const PLAN_ICONS: Record<PlanId, React.ElementType> = {
 
 const PLAN_COLORS: Record<PlanId, string> = {
   free: "from-slate-500 to-gray-600",
-  starter: "from-blue-500 to-cyan-500",
-  pro: "from-purple-500 to-violet-500",
+  starter: "from-primary to-lime-500",
+  pro: "from-emerald-500 to-primary",
   enterprise: "from-amber-500 to-orange-500",
 };
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; label: string }> = {
   active:    { icon: BadgeCheck,    color: "text-emerald-500", label: "Active" },
-  trialing:  { icon: Clock,         color: "text-blue-500",    label: "Free Trial" },
+  trialing:  { icon: Clock,         color: "text-primary",     label: "Free Trial" },
   past_due:  { icon: AlertTriangle, color: "text-amber-500",   label: "Past Due" },
   canceled:  { icon: RefreshCw,     color: "text-red-500",     label: "Canceled" },
   paused:    { icon: Clock,         color: "text-gray-500",    label: "Paused" },
@@ -230,7 +230,7 @@ export default function Billing() {
               </div>
 
               {sub.status === "trialing" && (
-                <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm text-blue-600 dark:text-blue-400 flex items-start gap-2">
+                <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-sm text-primary flex items-start gap-2">
                   <Clock className="w-4 h-4 mt-0.5 shrink-0" />
                   <div>
                     <span className="font-medium">14-day free trial</span> — All Pro features unlocked.

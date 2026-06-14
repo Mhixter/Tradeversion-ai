@@ -102,13 +102,13 @@ function TraderDetailsModal({ trader, seed, onClose, onCopy }: {
   const statItems = [
     { label: "Total ROI",         value: `+${trader.roi}%`,           color: "text-success",    icon: TrendingUp    },
     { label: "Win Rate",          value: `${trader.winRate}%`,         color: "text-primary",    icon: Target        },
-    { label: "Sharpe Ratio",      value: sharpe,                       color: "text-blue-400",   icon: Activity      },
+    { label: "Sharpe Ratio",      value: sharpe,                       color: "text-cyan-400",   icon: Activity      },
     { label: "Max Drawdown",      value: `-${trader.maxDrawdown}%`,    color: "text-destructive", icon: TrendingDown  },
     { label: "Profit Factor",     value: profitFactor,                 color: "text-amber-400",  icon: Percent       },
     { label: "Total Trades",      value: totalTrades.toLocaleString(), color: "text-foreground", icon: BarChart2     },
     { label: "Avg Trade",         value: `+${avgTrade}%`,              color: "text-success",    icon: ArrowUpRight  },
     { label: "Max Consec. Wins",  value: String(maxConsecWins),        color: "text-emerald-400",icon: Flame         },
-    { label: "Active Copiers",    value: (trader.copiers ?? 0).toLocaleString(), color: "text-violet-400", icon: Users },
+    { label: "Active Copiers",    value: (trader.copiers ?? 0).toLocaleString(), color: "text-primary",    icon: Users },
     { label: "Risk Score",        value: `${trader.riskScore}/10`,     color: "text-amber-400",  icon: AlertTriangle },
   ];
 
@@ -242,7 +242,7 @@ function TraderDetailsModal({ trader, seed, onClose, onCopy }: {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: "Profit Factor", value: profitFactor, sub: "Revenue / Loss ratio", color: "text-amber-400" },
-                  { label: "Sharpe Ratio",  value: sharpe,       sub: "Risk-adjusted return",  color: "text-blue-400"  },
+                  { label: "Sharpe Ratio",  value: sharpe,       sub: "Risk-adjusted return",  color: "text-cyan-400"  },
                   { label: "Total Trades",  value: totalTrades.toLocaleString(), sub: "Lifetime executions", color: "text-foreground" },
                   { label: "Avg Trade",     value: `+${avgTrade}%`, sub: "Per-trade return", color: "text-success" },
                 ].map(s => (
@@ -441,6 +441,16 @@ export default function CopyTrading() {
   const [search, setSearch] = useState("");
   const [copyTarget, setCopyTarget] = useState<any>(null);
   const [detailsTarget, setDetailsTarget] = useState<{ trader: any; seed: number } | null>(null);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [followingLoading, setFollowingLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/copy-trading/following", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setFollowing(Array.isArray(data) ? data : []))
+      .catch(() => setFollowing([]))
+      .finally(() => setFollowingLoading(false));
+  }, []);
 
   const tabs: { key: TabType; label: string; icon: React.ElementType }[] = [
     { key: "discover",  label: "Discover",    icon: Globe      },
@@ -660,59 +670,98 @@ export default function CopyTrading() {
           })}
         </div>
 
-        {/* My copied traders */}
+        {/* My Following */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Currently Copying</h2>
-            <button className="text-xs text-primary hover:underline flex items-center gap-0.5">
-              View All <ChevronRight className="w-3 h-3" />
-            </button>
+            <h2 className="text-sm font-bold flex items-center gap-2"><Users className="w-4 h-4 text-primary" />My Following</h2>
+            {following.length > 0 && (
+              <span className="text-xs text-muted-foreground">{following.length} active</span>
+            )}
           </div>
-          <div className="overflow-x-auto rounded-xl border border-border/50 bg-card">
-            <table className="w-full min-w-[600px]">
-              <thead>
-                <tr className="border-b border-border/50 bg-accent/30 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                  <th className="text-left px-4 py-3">Trader</th>
-                  <th className="text-right px-4 py-3">Allocated</th>
-                  <th className="text-right px-4 py-3">My P&L</th>
-                  <th className="text-right px-4 py-3">Since Copy</th>
-                  <th className="text-right px-4 py-3">Status</th>
-                  <th className="text-center px-4 py-3">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { name: "Alex Chen",   strategy: "AI Momentum",    allocated: "$2,500", pnl: "+$384.20", pct: "+15.4%", since: "42 days", positive: true  },
-                  { name: "Sarah Kim",   strategy: "XAUUSD Scalper", allocated: "$1,000", pnl: "+$127.50", pct: "+12.8%", since: "28 days", positive: true  },
-                  { name: "Marcus Reed", strategy: "Carry Trade",    allocated: "$500",   pnl: "-$23.40",  pct: "-4.7%",  since: "9 days",  positive: false },
-                ].map((row, i) => (
-                  <tr key={i} className="border-b border-border/30 hover:bg-accent/10 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <Avatar className="w-7 h-7">
-                          <AvatarImage src={`https://i.pravatar.cc/150?u=mc-${i}`} />
-                          <AvatarFallback className="text-[9px]">{row.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-xs font-semibold">{row.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{row.strategy}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-right font-medium">{row.allocated}</td>
-                    <td className={`px-4 py-3 text-xs text-right font-bold ${row.positive ? "text-success" : "text-destructive"}`}>{row.pnl}</td>
-                    <td className={`px-4 py-3 text-xs text-right font-semibold ${row.positive ? "text-success" : "text-destructive"}`}>{row.pct}</td>
-                    <td className="px-4 py-3 text-xs text-right text-muted-foreground">
-                      <span className="flex items-center justify-end gap-1"><Clock className="w-3 h-3" />{row.since}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button className="text-[10px] px-2.5 py-1 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors font-semibold">Stop</button>
-                    </td>
+
+          {followingLoading ? (
+            <div className="rounded-xl border border-border/50 bg-card p-8 flex justify-center">
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : following.length === 0 ? (
+            /* Empty state */
+            <div className="rounded-2xl border border-dashed border-border/60 bg-card/40 p-10 flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm mb-1">You're not copying anyone yet</h3>
+                <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+                  Browse the traders above, pick a top performer, and click <span className="text-primary font-semibold">Copy</span> to start mirroring their trades automatically.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground border border-border/50 rounded-lg px-3 py-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Risk controls built-in
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground border border-border/50 rounded-lg px-3 py-1.5">
+                  <Zap className="w-3.5 h-3.5 text-primary" /> Stop copying anytime
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground border border-border/50 rounded-lg px-3 py-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-primary" /> Set your own allocation
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Real data table */
+            <div className="overflow-x-auto rounded-xl border border-border/50 bg-card">
+              <table className="w-full min-w-[600px]">
+                <thead>
+                  <tr className="border-b border-border/50 bg-accent/30 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    <th className="text-left px-4 py-3">Trader</th>
+                    <th className="text-right px-4 py-3">Allocated</th>
+                    <th className="text-right px-4 py-3">My P&L</th>
+                    <th className="text-right px-4 py-3">ROI</th>
+                    <th className="text-right px-4 py-3">Status</th>
+                    <th className="text-center px-4 py-3">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {following.map((row: any, i: number) => {
+                    const pnl = row.roi ?? 0;
+                    const positive = pnl >= 0;
+                    return (
+                      <tr key={row.id ?? i} className="border-b border-border/30 hover:bg-accent/10 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="w-7 h-7">
+                              <AvatarImage src={`https://i.pravatar.cc/150?u=following-${row.id}`} />
+                              <AvatarFallback className="text-[9px]">{(row.traderName ?? "T")[0]}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-xs font-semibold">{row.traderName ?? "Trader"}</p>
+                              <p className="text-[10px] text-muted-foreground">{row.strategy ?? "—"}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-right font-medium">${(row.equity ?? 0).toLocaleString()}</td>
+                        <td className={`px-4 py-3 text-xs text-right font-bold ${positive ? "text-success" : "text-destructive"}`}>
+                          {positive ? "+" : ""}${Math.abs(pnl).toFixed(2)}
+                        </td>
+                        <td className={`px-4 py-3 text-xs text-right font-semibold ${positive ? "text-success" : "text-destructive"}`}>
+                          {positive ? "+" : ""}{pnl.toFixed(2)}%
+                        </td>
+                        <td className="px-4 py-3 text-xs text-right">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${row.status === "RUNNING" ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${row.status === "RUNNING" ? "bg-success" : "bg-muted-foreground"}`} />
+                            {row.status ?? "Active"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button className="text-[10px] px-2.5 py-1 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors font-semibold">Stop</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
       </div>
