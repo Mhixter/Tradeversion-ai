@@ -35,8 +35,7 @@ export const referProjectLogTypeEnum = pgEnum("refer_project_log_type", [
 ]);
 
 export const referProjectSettingsTable = pgTable("refer_project_settings", {
-  id: integer("id").primaryKey().default(1),
-  companyId: varchar("company_id").notNull().references(() => companiesTable.id, { onDelete: "cascade" }),
+  companyId: varchar("company_id").primaryKey().references(() => companiesTable.id, { onDelete: "cascade" }),
   enabled: boolean("enabled").notNull().default(false),
   maxOpenPositionsPerAccount: integer("max_open_positions_per_account").notNull().default(20),
   maxOpenPositionsPerSymbol: integer("max_open_positions_per_symbol").notNull().default(5),
@@ -58,7 +57,7 @@ export const referProjectSettingsTable = pgTable("refer_project_settings", {
   }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-}, (table) => [index("refer_project_settings_company_idx").on(table.companyId)]);
+});
 
 export const referProjectAccountsTable = pgTable("refer_project_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
