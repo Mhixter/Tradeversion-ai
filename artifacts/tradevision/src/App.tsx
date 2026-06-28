@@ -32,6 +32,14 @@ import BlogPage from "@/pages/Blog";
 import ContactPage from "@/pages/Contact";
 import Legal from "@/pages/Legal";
 import ForgotPassword from "@/pages/ForgotPassword";
+import ReferProjectDashboard from "@/pages/refer-project/ReferProjectDashboard";
+import ReferProjectConnectedAccounts from "@/pages/refer-project/ReferProjectConnectedAccounts";
+import ReferProjectTradingRules from "@/pages/refer-project/ReferProjectTradingRules";
+import ReferProjectAiDecisionEngine from "@/pages/refer-project/ReferProjectAiDecisionEngine";
+import ReferProjectTradeMonitor from "@/pages/refer-project/ReferProjectTradeMonitor";
+import ReferProjectStatistics from "@/pages/refer-project/ReferProjectStatistics";
+import ReferProjectLogs from "@/pages/refer-project/ReferProjectLogs";
+import ReferProjectSettings from "@/pages/refer-project/ReferProjectSettings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +101,22 @@ function BotManagerGated() {
   );
 }
 
+function ReferProjectAdminGated({ children }: { children: any }) {
+  const { role, isLoading, inCompany } = useCompanyRole();
+  if (!inCompany) {
+    return (
+      <RoleGate allowed={["owner", "admin"]} currentRole={role} isLoading={isLoading} pageName="Refer Project">
+        {children}
+      </RoleGate>
+    );
+  }
+  return (
+    <RoleGate allowed={["owner", "admin"]} currentRole={role} isLoading={isLoading} pageName="Refer Project">
+      {children}
+    </RoleGate>
+  );
+}
+
 function AuthedRouter() {
   return (
     <Switch>
@@ -123,6 +147,14 @@ function AuthedRouter() {
       <Route path="/cookies" component={Legal} />
       <Route path="/risk-disclosure" component={Legal} />
       <Route path="/compliance" component={Legal} />
+      <Route path="/refer-project/dashboard">{() => <ReferProjectAdminGated><ReferProjectDashboard /></ReferProjectAdminGated>}</Route>
+      <Route path="/refer-project/connected-accounts">{() => <ReferProjectAdminGated><ReferProjectConnectedAccounts /></ReferProjectAdminGated>}</Route>
+      <Route path="/refer-project/trading-rules">{() => <ReferProjectAdminGated><ReferProjectTradingRules /></ReferProjectAdminGated>}</Route>
+      <Route path="/refer-project/ai-decision-engine">{() => <ReferProjectAdminGated><ReferProjectAiDecisionEngine /></ReferProjectAdminGated>}</Route>
+      <Route path="/refer-project/trade-monitor">{() => <ReferProjectAdminGated><ReferProjectTradeMonitor /></ReferProjectAdminGated>}</Route>
+      <Route path="/refer-project/statistics">{() => <ReferProjectAdminGated><ReferProjectStatistics /></ReferProjectAdminGated>}</Route>
+      <Route path="/refer-project/logs">{() => <ReferProjectAdminGated><ReferProjectLogs /></ReferProjectAdminGated>}</Route>
+      <Route path="/refer-project/settings">{() => <ReferProjectAdminGated><ReferProjectSettings /></ReferProjectAdminGated>}</Route>
       <Route component={NotFound} />
     </Switch>
   );

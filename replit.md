@@ -32,6 +32,20 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 
 _Describe the high-level user-facing capabilities of this app once they exist._
 
+## Refer Project module (admin-only)
+
+- New isolated admin module routes:
+  - UI: `/refer-project/dashboard`, `/refer-project/connected-accounts`, `/refer-project/trading-rules`, `/refer-project/ai-decision-engine`, `/refer-project/trade-monitor`, `/refer-project/statistics`, `/refer-project/logs`, `/refer-project/settings`
+  - API: `/api/refer-project/*`
+- Access is restricted to company `owner` and `admin` roles only.
+- Data isolation uses dedicated tables:
+  - `refer_project_settings`
+  - `refer_project_accounts`
+  - `refer_project_trades`
+  - `refer_project_ai_decisions`
+  - `refer_project_logs`
+- Feature flag: `refer_project_settings.enabled` controls runtime behavior; when disabled, account workers and trade automation do not run.
+
 ## User preferences
 
 _Populate as you build — explicit user instructions worth remembering across sessions._
