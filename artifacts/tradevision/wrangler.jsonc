@@ -5,7 +5,8 @@
   "assets": {
     // Vite builds into dist/public (see vite.config.ts build.outDir)
     "directory": "./dist/public",
+    "html_handling": "auto-trailing-slash",
     // Serve index.html for all unmatched routes (SPA routing via Wouter)
-    "html_handling": "single-page-application"
+    "not_found_handling": "single-page-application"
   }
 }
