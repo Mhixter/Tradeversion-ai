@@ -54,6 +54,14 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: "Billing",         href: "/billing",          icon: CreditCard,      show: canViewBilling || !inCompany },
     { name: "Team",            href: "/team-management",  icon: UserCog,         show: true },
     { name: "Settings",        href: "/settings",         icon: Settings,        show: true },
+    { name: "Refer • Dash",    href: "/refer-project/dashboard",           icon: Shield, show: isAdmin },
+    { name: "Refer • Accts",   href: "/refer-project/connected-accounts",  icon: Shield, show: isAdmin },
+    { name: "Refer • Rules",   href: "/refer-project/trading-rules",       icon: Shield, show: isAdmin },
+    { name: "Refer • AI",      href: "/refer-project/ai-decision-engine",  icon: Shield, show: isAdmin },
+    { name: "Refer • Monitor", href: "/refer-project/trade-monitor",       icon: Shield, show: isAdmin },
+    { name: "Refer • Stats",   href: "/refer-project/statistics",          icon: Shield, show: isAdmin },
+    { name: "Refer • Logs",    href: "/refer-project/logs",                icon: Shield, show: isAdmin },
+    { name: "Refer • Settings",href: "/refer-project/settings",            icon: Shield, show: isAdmin },
   ].filter(i => i.show);
 
   const initials = user

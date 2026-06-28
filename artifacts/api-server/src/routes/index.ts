@@ -24,6 +24,7 @@ import analyticsRouter from "./analytics";
 import emergencyRouter from "./emergency";
 import riskEngineRouter from "./riskengine";
 import staffRouter from "./staff";
+import referProjectRouter from "./referProject";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(analyticsRouter);
 router.use(emergencyRouter);
 router.use(riskEngineRouter);
 router.use(staffRouter);
+router.use(referProjectRouter);
 
 export default router;
