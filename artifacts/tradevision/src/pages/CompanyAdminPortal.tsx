@@ -11,6 +11,7 @@ import {
   PlusCircle, Settings, ChevronDown, Star, MessageSquare, Trash2, Edit, X, Save,
 } from "lucide-react";
 import { LiveTradingTerminal } from "@/components/admin/LiveTradingTerminal";
+import { buildAdminApiUrl } from "@/lib/adminApi";
 
 const DEFAULT_EMAIL = "saidumuhammed664@gmail.com";
 const DEFAULT_PASS  = "Mhixter664@gmail.com";
@@ -18,10 +19,8 @@ const SESSION_KEY   = "company_admin_session";
 
 type AdminTab = "overview" | "companies" | "users" | "bots" | "live-test" | "billing" | "support" | "accounts" | "roles" | "testimonials";
 
-const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
-
 async function apiPost(path: string, body?: object) {
-  const r = await fetch(`${BASE}/api${path}`, {
+  const r = await fetch(buildAdminApiUrl(path), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
@@ -29,11 +28,11 @@ async function apiPost(path: string, body?: object) {
   return r.json();
 }
 async function apiGet(path: string) {
-  const r = await fetch(`${BASE}/api${path}`);
+  const r = await fetch(buildAdminApiUrl(path));
   return r.json();
 }
 async function apiPatch(path: string, body: object) {
-  const r = await fetch(`${BASE}/api${path}`, {
+  const r = await fetch(buildAdminApiUrl(path), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

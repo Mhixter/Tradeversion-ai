@@ -5,11 +5,10 @@ import {
   CheckCircle, Clock, Trash2, ChevronDown,
 } from "lucide-react";
 import { useLivePrices, ALL_SYMBOLS } from "@/hooks/useLivePrices";
-
-const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+import { buildAdminApiUrl } from "@/lib/adminApi";
 
 async function api(method: string, path: string, body?: object) {
-  const r = await fetch(`${BASE}/api${path}`, {
+  const r = await fetch(buildAdminApiUrl(path), {
     method,
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
