@@ -1,0 +1,12 @@
+{
+  // Root-level Cloudflare Worker configuration for the Tradevision frontend.
+  // Used when wrangler runs from the repo root (e.g. Cloudflare's version command).
+  // The assets directory points to the Vite build output inside the tradevision package.
+  "name": "tradeversion-ai",
+  "compatibility_date": "2024-09-23",
+  "assets": {
+    "directory": "./artifacts/tradevision/dist/public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
+  }
+}
