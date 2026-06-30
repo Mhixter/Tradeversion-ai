@@ -8,7 +8,7 @@
     "preinstall": "node -e \"const fs=require('fs');['package-lock.json','yarn.lock'].forEach(f=>{if(fs.existsSync(f)) fs.rmSync(f,{force:true});});const ua=process.env.npm_config_user_agent||'';if(!ua.startsWith('pnpm/')){console.error('Use pnpm');process.exit(1)}\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "railway:build": "pnpm --filter @workspace/api-server run build",
-    "railway:start": "sh -c 'ls -R artifacts/api-server/dist && pnpm --filter @workspace/api-server run start'",
+    "railway:start": "sh -c 'test -f artifacts/api-server/dist/index.mjs || pnpm run railway:build; ls -R artifacts/api-server/dist && pnpm --filter @workspace/api-server run start'",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
