@@ -9,7 +9,7 @@
     "build:server": "pnpm --filter @workspace/api-server run build",
     "build:bundle": "rm -rf artifacts/api-server/dist/public && mkdir -p artifacts/api-server/dist && cp -R artifacts/tradevision/dist/public artifacts/api-server/dist/public",
     "build": "pnpm run build:client && pnpm run build:server && pnpm run build:bundle",
-    "start": "pnpm --filter @workspace/db push && pnpm --filter @workspace/api-server run start",
+    "start": "pnpm --filter @workspace/api-server run start",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
