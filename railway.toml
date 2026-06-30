@@ -1,5 +1,5 @@
 [build]
-buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build"
+buildCommand = "pnpm install --frozen-lockfile && pnpm run build"
 
 [deploy]
-startCommand = "pnpm --filter @workspace/db push && pnpm --filter @workspace/api-server start"
+startCommand = "pnpm run start"

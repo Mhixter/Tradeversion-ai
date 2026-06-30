@@ -75,7 +75,7 @@ export default function Docs() {
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const EXAMPLE = `curl -X GET https://api.tradevision.ai/v1/bots \\
+  const EXAMPLE = `curl -X GET /api/bots \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json"`;
 
@@ -176,7 +176,7 @@ export default function Docs() {
           <div>
             <h2 className="text-xl font-black mb-4">Endpoints</h2>
             <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
-              <div className="border-b border-border/50 bg-accent/30 px-5 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Base URL: https://api.tradevision.ai/v1</div>
+              <div className="border-b border-border/50 bg-accent/30 px-5 py-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Base URL: /api</div>
               {API_ENDPOINTS.map((e, i) => (
                 <div key={e.path} className={`flex items-center gap-4 px-5 py-4 ${i < API_ENDPOINTS.length - 1 ? "border-b border-border/30" : ""} hover:bg-accent/10 transition-colors`}>
                   <span className={`text-[10px] font-black px-2 py-1 rounded border ${METHOD_COLORS[e.method]} shrink-0 w-14 text-center`}>{e.method}</span>

@@ -130,6 +130,23 @@ router.get("/auth/user", (req: Request, res: Response) => {
   );
 });
 
+router.get("/auth/login", (req: Request, res: Response) => {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(req.query)) {
+    if (typeof value === "string") {
+      params.append(key, value);
+    } else if (Array.isArray(value)) {
+      for (const entry of value) {
+        if (typeof entry === "string") {
+          params.append(key, entry);
+        }
+      }
+    }
+  }
+  const search = params.toString();
+  res.redirect(search ? `/api/login?${search}` : "/api/login");
+});
+
 router.get("/login", async (req: Request, res: Response) => {
   const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
