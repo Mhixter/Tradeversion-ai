@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "export PORT=8081 NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
+    "railway:build": "pnpm run build",
+    "railway:start": "pnpm run start",
     "start": "sh -c 'test -f ./dist/index.mjs || pnpm run build; node --enable-source-maps ./dist/index.mjs'",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
