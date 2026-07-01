@@ -46,11 +46,11 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       "/api": {
-        target: `http://localhost:${apiPort}`,
+        target: `http://127.0.0.1:${apiPort}`,
         changeOrigin: true,
       },
       "/ws": {
-        target: `ws://localhost:${apiPort}`,
+        target: `ws://127.0.0.1:${apiPort}`,
         ws: true,
         changeOrigin: true,
       },
