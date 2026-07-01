@@ -7,7 +7,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 COPY . .
 
 RUN pnpm install --no-frozen-lockfile
-RUN pnpm --filter @workspace/tradevision build
+RUN pnpm run railway:build
 
-EXPOSE 3000
-CMD ["pnpm", "--filter", "@workspace/tradevision", "dev"]
+EXPOSE 8081
+CMD ["pnpm", "run", "railway:start"]

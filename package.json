@@ -1,16 +1,8 @@
 {
-  "$schema": "https://railway.com/railway.schema.json",
-  "build": {
-    "builder": "DOCKERFILE",
-    "watchPatterns": [
-      "/artifacts/api-server/**"
-    ],
-    "dockerfilePath": "Dockerfile"
-  },
-  "deploy": {
-    "numReplicas": 1,
-    "startCommand": "pnpm run railway:start",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+  "name": "tradeversion-ai",
+  "private": true,
+  "scripts": {
+    "railway:build": "pnpm --filter @workspace/tradevision run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/db run push",
+    "railway:start": "pnpm --filter @workspace/api-server run start"
   }
 }
