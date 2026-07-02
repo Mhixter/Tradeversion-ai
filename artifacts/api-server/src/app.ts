@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { workerManager } from "./refer-project/workerManager.js";
 
 const app: Express = express();
 
@@ -31,6 +32,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(authMiddleware);
 
 app.use("/api", router);
+
+// Start Refer Project worker manager (non-blocking — recovers active accounts after restart)
+workerManager.start().catch(err => logger.error({ err }, "Refer Project worker manager failed to start"));
 
 // In production, serve the built React frontend and handle client-side routing
 if (process.env.NODE_ENV === "production") {

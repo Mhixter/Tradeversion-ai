@@ -7,3 +7,4 @@
 - [TradeVision Mock Data Policy](tradevision-mock-data-policy.md) — All dashboard/analytics/trades routes return 0/empty (not fakes) when no broker configured; execute requires real broker equity.
 - [TradeVision Landing Page](tradevision-landing.md) — Mobile: full-screen 4-step swipeable onboarding (MobileOnboarding, lg:hidden); Desktop: full landing (hidden lg:block). No violet/purple anywhere; all primary=lemon-green.
 - [Replit Artifact Dynamic Port](replit-artifact-port.md) — Replit artifact workflows inject PORT dynamically; hardcoding PORT in the dev script causes 502. Never override PORT in artifact dev scripts.
+- [Refer Project Module](refer-project-module.md) — Full trading automation module at /company-admin/refer-project; 5 DB tables (rp_*); server-side Bearer auth on all routes; workerManager starts on server boot.

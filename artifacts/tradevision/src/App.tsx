@@ -27,6 +27,7 @@ import TeamManagement from "@/pages/TeamManagement";
 import Landing from "@/pages/Landing";
 import Signup from "@/pages/Signup";
 import CompanyAdminPortal from "@/pages/CompanyAdminPortal";
+import ReferProject from "@/pages/ReferProject";
 import FAQPage from "@/pages/FAQ";
 import BlogPage from "@/pages/Blog";
 import ContactPage from "@/pages/Contact";
@@ -181,6 +182,9 @@ function AuthedApp() {
 function AppRouter() {
   const [location] = useLocation();
 
+  if (location.startsWith("/company-admin/refer-project")) {
+    return <ReferProject />;
+  }
   if (location === "/company-admin" || location.startsWith("/company-admin/")) {
     return <CompanyAdminPortal />;
   }

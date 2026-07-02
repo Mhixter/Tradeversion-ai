@@ -11,6 +11,7 @@ import {
   PlusCircle, Settings, ChevronDown, Star, MessageSquare, Trash2, Edit, X, Save,
 } from "lucide-react";
 import { LiveTradingTerminal } from "@/components/admin/LiveTradingTerminal";
+import { storeRPToken } from "./ReferProject/rpApi";
 
 const DEFAULT_EMAIL = "saidumuhammed664@gmail.com";
 const DEFAULT_PASS  = "Mhixter664@gmail.com";
@@ -94,6 +95,7 @@ function LoginPage({ onLogin }: { onLogin: (s: any) => void }) {
       const data = await apiPost("/company-admin/auth", { email, password });
       if (data.success) {
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+        storeRPToken(email, password); // Store RP admin token for server-side auth
         onLogin(data);
       } else {
         setError(data.error ?? "Invalid credentials. Please try again.");
@@ -1169,6 +1171,17 @@ function OverviewTab({ stats, companies, users, setTab }: { stats: any; companie
                 <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-auto group-hover:translate-x-0.5 transition-transform" />
               </button>
             ))}
+            {/* Refer Project — admin-only trading module */}
+            <button onClick={() => window.location.href = "/company-admin/refer-project"}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors text-left group">
+              <Activity className="w-4 h-4 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-semibold block">Refer Project</span>
+                <span className="text-[10px] text-muted-foreground">XM MT5 Automation Module</span>
+              </div>
+              <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-semibold">NEW</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-1 group-hover:translate-x-0.5 transition-transform" />
+            </button>
           </div>
         </div>
 
