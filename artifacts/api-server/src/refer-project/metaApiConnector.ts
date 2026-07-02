@@ -341,12 +341,13 @@ export async function verifyMetaApiAccount(
           : `Account found on MetaApi but not yet connected — state: ${found.state ?? "unknown"}, connection: ${found.connectionStatus ?? "unknown"}. MetaApi is trying to reach the broker. This usually takes 2–5 minutes on first deploy.`,
       };
     }
-    // Token works but account not yet provisioned — distinct from "verified"
+    // Token works but account not yet provisioned — list all MetaApi logins for diagnostics
+    const allLogins = accounts.map(a => a.login ?? "?").join(", ");
     return {
       tokenValid:     true,
       accountFound:   false,
       networkBlocked: false,
-      message: "MetaApi token valid. No account found with this login. Add it via app.metaapi.cloud → MT Accounts, or Start the bot to auto-provision.",
+      message: `MetaApi token valid. Searched for login "${mt5Login}" but not found. MetaApi accounts on this token: [${allLogins || "none"}]. If your login is listed, delete this account and re-add it with the exact login shown.`,
     };
   } catch (err: unknown) {
     const msg    = String(err);
