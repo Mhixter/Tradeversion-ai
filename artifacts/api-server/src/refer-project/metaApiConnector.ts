@@ -237,17 +237,28 @@ export class MetaApiRestConnector implements MT5Connector {
           created = await this.provFetch<typeof created>("/users/current/accounts", "POST", payload);
         } catch (err: unknown) {
           // E_SRV_NOT_FOUND: MetaApi doesn't know this server name.
-          // Parse the suggested names from the error details and retry with the first one.
+          // Try each suggested server in turn until one authenticates successfully.
           const details = (err as { details?: { code?: string; serversByBrokers?: Record<string, string[]> } }).details;
           if (details?.code === "E_SRV_NOT_FOUND" && details.serversByBrokers) {
             const suggested = Object.values(details.serversByBrokers).flat();
-            if (suggested.length > 0) {
-              console.warn(`[MetaApiConnector] Server "${this.server}" unknown — retrying with "${suggested[0]}"`);
-              created = await this.provFetch<typeof created>("/users/current/accounts", "POST", {
-                ...payload,
-                server: suggested[0],
-              });
-            } else { throw err; }
+            let lastErr: unknown = err;
+            created = undefined as unknown as typeof created;
+            for (const serverName of suggested) {
+              try {
+                console.warn(`[MetaApiConnector] Server "${this.server}" unknown — trying "${serverName}"`);
+                created = await this.provFetch<typeof created>("/users/current/accounts", "POST", {
+                  ...payload, server: serverName,
+                });
+                break; // success
+              } catch (retryErr: unknown) {
+                lastErr = retryErr;
+                const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
+                // E_AUTH means credentials rejected — this server exists but login is wrong; stop trying
+                if (retryMsg.includes("E_AUTH")) throw retryErr;
+                // otherwise keep trying next suggested server
+              }
+            }
+            if (!created) throw lastErr;
           } else { throw err; }
         }
 
