@@ -26,7 +26,13 @@ const DEPLOY_POLL_MS    = 5_000;
 const KNOWN_REGIONS = ["london", "vint-hill", "new-york", "us-east", "singapore"] as const;
 
 /* ── MetaApi REST Connector ──────────────────────────────────────────────── */
-export class MetaApiRestConnector implements MT5Connector {
+/**
+ * MetaApiRestConnector does NOT implement MT5Connector directly because its connect()
+ * returns { ok, error? } rather than a plain boolean — the richer return type is needed
+ * so accountWorker can surface the exact failure reason in Event Logs.
+ * SimulatedMT5Connector still implements MT5Connector for the plain interface.
+ */
+export class MetaApiRestConnector {
   private metaApiAccountId: string | null;
   private region = "london";
   private connected = false;
@@ -116,6 +122,9 @@ export class MetaApiRestConnector implements MT5Connector {
   }
 
   isConnected(): boolean { return this.connected; }
+
+  /** Called by the worker tick after confirming client API is reachable. */
+  markConnected(): void { this.connected = true; }
 
   async getAccountInfo(): Promise<MT5AccountInfo> {
     const data = await this.clientFetch<{
@@ -346,18 +355,17 @@ export class MetaApiRestConnector implements MT5Connector {
     type MetaApiAccount = { id: string; login?: string; server?: string; region?: string; state?: string; connectionStatus?: string };
     const allAccounts = await this.provFetch<MetaApiAccount[]>("/users/current/accounts?limit=100");
 
-    // If we have a stored ID, check its current state
+    // If we have a stored ID, validate it belongs to this login and check its current state
     if (this.metaApiAccountId) {
       const stored = allAccounts.find(a => a.id === this.metaApiAccountId);
-      if (stored) {
+      if (stored && String(stored.login) === String(this.mt5Login)) {
         this.region = stored.region ?? "london";
-        console.log(`[MetaApiConnector] Stored account id=${stored.id} state=${stored.state} connectionStatus=${stored.connectionStatus} region=${stored.region}`);
+        console.log(`[MetaApiConnector] Stored account id=${stored.id} login=${stored.login} state=${stored.state} connectionStatus=${stored.connectionStatus} region=${stored.region}`);
         if (stored.connectionStatus === "CONNECTED") return true;
-        // Account found but not yet connected — fall through to check if another account for this login IS connected
-      }
-      // If stored ID not in list (deleted/rotated), clear it and search by login below
-      if (!stored) {
-        console.warn(`[MetaApiConnector] Stored id=${this.metaApiAccountId} not found in account list — searching by login`);
+        // Stored account matches login but not yet connected — fall through to check if a CONNECTED one exists
+      } else {
+        // Stored ID missing from list OR belongs to a different login — clear it
+        console.warn(`[MetaApiConnector] Stored id=${this.metaApiAccountId} invalid (${stored ? `login mismatch: ${stored.login} ≠ ${this.mt5Login}` : "not in account list"}) — searching by login`);
         this.metaApiAccountId = null;
       }
     }

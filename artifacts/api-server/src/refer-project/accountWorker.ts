@@ -143,7 +143,11 @@ export class AccountWorker {
         // Try client API: if it works, mark connected; if not, silently wait for next tick
         try {
           await this.connector.getAccountInfo();
-          // Client API worked — mark connected and log
+          // Client API worked — mark the connector as connected and log success
+          meta.markConnected();
+          await db.update(rpAccountsTable)
+            .set({ connectionStatus: "connected", status: "active", lastSyncTime: new Date(), updatedAt: new Date() })
+            .where(eq(rpAccountsTable.id, this.accountId));
           await rpLog({ event: "CONNECTION", accountId: this.accountId, level: "info",
             message: `Account ${this.accountId} broker connection established — live data available` });
         } catch {
