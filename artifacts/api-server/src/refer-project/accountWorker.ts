@@ -68,14 +68,16 @@ export class AccountWorker {
 
       let ok = await this.connector.connect();
 
-      // If MetaApi connector fails (network unreachable / bad creds), fall back
-      // to simulation so the worker keeps running and doesn't sit in "error" state.
+      // If MetaApi connector fails, do NOT fall back to simulation.
+      // Surface the real error so the user can fix it (bad creds, egress block, etc.)
       if (!ok && this.usingMetaApi) {
-        await rpLog({ event: "CONNECTION", accountId: this.accountId, level: "warn",
-          message: `MetaApi unreachable — falling back to simulated connector for account ${this.accountId}` });
-        this.connector   = new SimulatedMT5Connector();
-        this.usingMetaApi = false;
-        ok = await this.connector.connect();
+        await rpLog({ event: "ERROR", accountId: this.accountId, level: "error",
+          message: `MetaApi connection failed for account ${this.accountId}. Check Railway Logs tab for the exact error. Common causes: wrong server name, wrong credentials, MetaApi account not yet deployed. Try stopping and restarting the worker.` });
+        this.running = false;
+        await db.update(rpAccountsTable)
+          .set({ connectionStatus: "error", status: "error", updatedAt: new Date() })
+          .where(eq(rpAccountsTable.id, this.accountId));
+        return;
       }
 
       const status = ok ? "connected" : "error";

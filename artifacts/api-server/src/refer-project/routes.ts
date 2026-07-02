@@ -13,7 +13,7 @@ import { eq, and, desc, gte, sql } from "drizzle-orm";
 import { workerManager } from "./workerManager.js";
 import { rpLog } from "./rpLogger.js";
 import { DEFAULT_SYMBOLS } from "./types.js";
-import { verifyMetaApiAccount } from "./metaApiConnector.js";
+import { verifyMetaApiAccount, MetaApiRestConnector } from "./metaApiConnector.js";
 
 /* ─── Admin auth ─────────────────────────────────────────────────────────── */
 const RP_ADMIN_EMAIL = "saidumuhammed664@gmail.com";
@@ -222,6 +222,32 @@ router.post("/refer-project/accounts/:id/test-connection", async (req, res) => {
     const ok = Math.random() > 0.1;
     res.json({ success: ok, isLive: false, latencyMs: Math.round(delay), message: ok ? "Simulated connection OK" : "Simulated connection failed" });
   } catch (err) { req.log.error(err); res.status(500).json({ error: "Test failed" }); }
+});
+
+/* ─── Real MT5 History (live from MetaApi) ───────────────────────────────── */
+router.get("/refer-project/accounts/:id/mt5-history", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const days = parseInt((req.query.days as string) ?? "30");
+    const [account] = await db.select().from(rpAccountsTable).where(eq(rpAccountsTable.id, id)).limit(1);
+    if (!account) return void res.status(404).json({ error: "Account not found" });
+    if (!account.metaApiAccountId) return void res.json({ deals: [], positions: [], message: "Account not yet provisioned on MetaApi — click Verify first." });
+
+    const token = process.env.METAAPI_TOKEN;
+    if (!token) return void res.json({ deals: [], positions: [], message: "METAAPI_TOKEN not configured." });
+
+    const connector = new MetaApiRestConnector(
+      token, account.mt5Login, account.tradingPassword ?? "", account.server,
+      account.accountName, id, account.metaApiAccountId
+    );
+
+    const [deals, positions] = await Promise.all([
+      connector.getDealHistory(days),
+      connector.getRealOpenPositions(),
+    ]);
+
+    res.json({ deals, positions, metaApiAccountId: account.metaApiAccountId });
+  } catch (err) { req.log.error(err); res.status(500).json({ error: "Failed to fetch MT5 history", details: String(err) }); }
 });
 
 /* ─── Dashboard ─────────────────────────────────────────────────────────── */

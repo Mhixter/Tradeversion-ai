@@ -46,36 +46,62 @@ export class MetaApiRestConnector implements MT5Connector {
   /* ── Public interface ────────────────────────────────────────────────── */
 
   async connect(): Promise<boolean> {
-    // Two attempts: if deploy returns 404 (stale cached ID), clear and re-provision once.
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const alreadyConnected = await this.provision();
-        if (!alreadyConnected) {
+    try {
+      // Step 1: Provision (find/create MetaApi account; returns true if already CONNECTED)
+      const alreadyConnected = await this.provision();
+
+      // Step 2: Ensure account is deployed (best-effort — ignore if already deployed)
+      if (!alreadyConnected) {
+        try {
           await this.deployAccount();
+        } catch (deployErr: unknown) {
+          const msg = String(deployErr);
+          // 409 = already deploying; 422 = already deployed — both are fine
+          if (!msg.includes("409") && !msg.includes("422")) {
+            console.warn(`[MetaApiConnector] deploy warning (non-fatal): ${msg}`);
+          }
         }
-        const ok = await this.waitConnected();
-        this.connected = ok;
-        return ok;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        const is404Deploy = msg.includes("/deploy →") && msg.includes("404");
-        if (is404Deploy && attempt === 1) {
-          // Stale MetaApi account ID — wipe it and retry fresh
-          console.warn("[MetaApiConnector] deploy 404 (stale ID) — clearing and re-provisioning");
-          await db.update(rpAccountsTable)
-            .set({ metaApiAccountId: null, updatedAt: new Date() })
-            .where(eq(rpAccountsTable.id, this.dbAccountId));
-          this.metaApiAccountId = null;
-          continue;
-        }
-        const cause = (err as { cause?: { code?: string } })?.cause?.code;
-        console.warn(`[MetaApiConnector] connect failed (${cause ?? msg}) — falling back to simulation`);
-        this.connected = false;
-        return false;
       }
+
+      // Step 3: Try client API immediately — if balance is fetchable, we're live
+      try {
+        await this.getAccountInfo();
+        console.log("[MetaApiConnector] Client API accessible — connected!");
+        this.connected = true;
+        return true;
+      } catch {
+        // Not ready yet — fall through to polling
+      }
+
+      // Step 4: Poll provisioning API for CONNECTED status (up to 2 minutes)
+      const ok = await this.waitConnected(120_000);
+      if (ok) {
+        // Double-check client API is actually accessible
+        try {
+          await this.getAccountInfo();
+          this.connected = true;
+          return true;
+        } catch (clientErr) {
+          console.warn(`[MetaApiConnector] Provisioning says CONNECTED but client API failed: ${clientErr}`);
+        }
+      }
+
+      console.warn("[MetaApiConnector] Could not reach MetaApi client API within timeout");
+      this.connected = false;
+      return false;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // If stale account ID caused a 404, clear it so next start re-provisions
+      if (msg.includes("404") || msg.includes("not found")) {
+        console.warn("[MetaApiConnector] Stale MetaApi account ID — clearing for re-provision next restart");
+        await db.update(rpAccountsTable)
+          .set({ metaApiAccountId: null, updatedAt: new Date() })
+          .where(eq(rpAccountsTable.id, this.dbAccountId));
+      }
+      console.warn(`[MetaApiConnector] connect failed: ${msg}`);
+      this.connected = false;
+      return false;
     }
-    this.connected = false;
-    return false;
   }
 
   async disconnect(): Promise<void> {
@@ -118,6 +144,73 @@ export class MetaApiRestConnector implements MT5Connector {
       profit:       p.profit,
       openTime:     new Date(p.time),
     }));
+  }
+
+  /** Fetch real closed deal history from MetaApi (last N days). */
+  async getDealHistory(days = 30): Promise<Array<{
+    id: string; symbol: string; type: string; entry: string;
+    volume: number; price: number; profit: number; commission: number;
+    swap: number; time: string; orderId?: string;
+  }>> {
+    if (!this.metaApiAccountId) return [];
+    const end   = new Date();
+    const start = new Date(end.getTime() - days * 86_400_000);
+    try {
+      const deals = await this.clientFetch<Array<{
+        id: string; symbol?: string; type: string; entry?: string;
+        volume?: number; price?: number; profit?: number; commission?: number;
+        swap?: number; time: string; orderId?: string;
+      }>>(`/users/current/accounts/${this.metaApiAccountId}/history-deals/time/${start.toISOString()}/${end.toISOString()}`);
+      return deals
+        .filter(d => d.symbol && d.type !== "DEAL_TYPE_BALANCE") // skip deposit/withdrawal entries
+        .map(d => ({
+          id:         String(d.id),
+          symbol:     d.symbol ?? "",
+          type:       d.type ?? "",
+          entry:      d.entry ?? "",
+          volume:     d.volume ?? 0,
+          price:      d.price ?? 0,
+          profit:     d.profit ?? 0,
+          commission: d.commission ?? 0,
+          swap:       d.swap ?? 0,
+          time:       d.time,
+          orderId:    d.orderId ? String(d.orderId) : undefined,
+        }));
+    } catch (err) {
+      console.warn(`[MetaApiConnector] getDealHistory failed: ${err}`);
+      return [];
+    }
+  }
+
+  /** Fetch real open positions from MetaApi live account. */
+  async getRealOpenPositions(): Promise<Array<{
+    id: string; symbol: string; type: string; volume: number;
+    openPrice: number; currentPrice: number; profit: number;
+    commission: number; swap: number; time: string;
+  }>> {
+    if (!this.metaApiAccountId) return [];
+    try {
+      const positions = await this.clientFetch<Array<{
+        id: string | number; symbol: string; type: string; volume: number;
+        openPrice: number; currentPrice?: number; profit?: number;
+        commission?: number; swap?: number; time: string;
+      }>>(`/users/current/accounts/${this.metaApiAccountId}/positions`);
+      return positions.map(p => ({
+        id:           String(p.id),
+        symbol:       p.symbol,
+        type:         p.type,
+        volume:       p.volume,
+        openPrice:    p.openPrice,
+        currentPrice: p.currentPrice ?? p.openPrice,
+        profit:       p.profit ?? 0,
+        commission:   p.commission ?? 0,
+        swap:         p.swap ?? 0,
+        time:         p.time,
+      }));
+    } catch (err) {
+      console.warn(`[MetaApiConnector] getRealOpenPositions failed: ${err}`);
+      return [];
+    }
   }
 
   /* ── Simulated price data ────────────────────────────────────────────── */
