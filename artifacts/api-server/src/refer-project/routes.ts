@@ -420,8 +420,20 @@ router.post("/refer-project/accounts/:id/force-redeploy", async (req, res) => {
 
     steps.push(`Current state: ${provAcc.state} / ${provAcc.connectionStatus} (server: "${provAcc.server}")`);
 
+    // Allow caller to override the server name (e.g. when DB has wrong value)
+    const overrideServer = typeof req.body?.server === "string" && req.body.server.trim()
+      ? req.body.server.trim() : null;
+
+    // If override provided, update DB server first
+    if (overrideServer && overrideServer !== account.server) {
+      await db.update(rpAccountsTable)
+        .set({ server: overrideServer, updatedAt: new Date() })
+        .where(eq(rpAccountsTable.id, id));
+      steps.push(`✅ DB server updated: "${account.server}" → "${overrideServer}"`);
+    }
+
     // Step 2: patch server name if MetaApi server is missing OR different from DB
-    const dbServer = account.server;
+    const dbServer = overrideServer ?? account.server;
     const metaServer = provAcc.server ?? "";
     let patchOk = true;
     if (!metaServer || metaServer !== dbServer) {

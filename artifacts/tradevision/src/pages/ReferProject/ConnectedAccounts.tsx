@@ -91,6 +91,7 @@ export default function ConnectedAccounts() {
   const [diagLoading, setDiagLoading]       = useState(false);
   const [redeploying, setRedeploying]       = useState(false);
   const [redeploySteps, setRedeploySteps]   = useState<string[]>([]);
+  const [serverOverride, setServerOverride] = useState("");
 
   const [form, setForm] = useState({
     accountName: "", mt5Login: "", tradingPassword: "", investorPassword: "",
@@ -161,6 +162,7 @@ export default function ConnectedAccounts() {
     setDiagAccount(acc);
     setDiagStatus(null);
     setRedeploySteps([]);
+    setServerOverride("");
     setDiagLoading(true);
     try {
       const r = await rpGet(`/api/refer-project/accounts/${acc.id}/metaapi-status`);
@@ -178,7 +180,8 @@ export default function ConnectedAccounts() {
     setRedeploying(true);
     setRedeploySteps([]);
     try {
-      const r = await rpPost(`/api/refer-project/accounts/${diagAccount.id}/force-redeploy`);
+      const body = serverOverride.trim() ? { server: serverOverride.trim() } : {};
+      const r = await rpPost(`/api/refer-project/accounts/${diagAccount.id}/force-redeploy`, body);
       const data = await r.json() as { success?: boolean; steps?: string[]; error?: string; details?: string };
       if (!r.ok) {
         setRedeploySteps([`❌ Server error (${r.status}): ${data.error ?? "Unknown error"}${data.details ? ` — ${data.details}` : ""}`]);
@@ -440,6 +443,26 @@ export default function ConnectedAccounts() {
                       {JSON.stringify(diagStatus.rawMetaApiAccount, null, 2)}
                     </pre>
                   </details>
+                )}
+
+                {/* Server override input */}
+                {diagStatus.connectionStatus !== "CONNECTED" && (
+                  <div>
+                    <label className="block text-[10px] text-muted-foreground mb-1">
+                      Override server name for Fix & Redeploy
+                      <span className="text-amber-400 ml-1">(current: "{diagAccount.server}")</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. XMGlobal-MT5 6"
+                      value={serverOverride}
+                      onChange={e => setServerOverride(e.target.value)}
+                      className="w-full bg-black/30 border border-border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-primary"
+                    />
+                    <p className="text-[9px] text-muted-foreground mt-0.5">
+                      Leave blank to keep current server. Enter the exact server name from your XM MT5 terminal.
+                    </p>
+                  </div>
                 )}
 
                 {/* Redeploy steps */}
