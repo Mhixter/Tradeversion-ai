@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, WifiOff, Loader2, DollarSign } from "lucide-react";
+import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, WifiOff, Loader2, DollarSign, Stethoscope, RotateCcw } from "lucide-react";
 import { rpGet, rpPost, rpDelete } from "./rpApi";
 
 interface Account {
@@ -13,6 +13,18 @@ interface Account {
 interface TestResult {
   ok: boolean; ms: number; isLive?: boolean;
   message?: string; state?: string; connectionStatus?: string;
+}
+
+interface MetaApiStatus {
+  metaApiAccountId: string | null;
+  state: string | null;
+  connectionStatus: string | null;
+  region: string | null;
+  server?: string | null;
+  version?: number | null;
+  clientApiUrl?: string;
+  message?: string;
+  error?: string;
 }
 
 const statusColor = (s: string) =>
@@ -49,6 +61,13 @@ const verifyBadge = (status: string, testing: boolean, message?: string) => {
   return <span className="text-[10px] text-muted-foreground">Unverified</span>;
 };
 
+const connStatusColor = (s: string | null) => {
+  if (!s) return "text-muted-foreground";
+  if (s === "CONNECTED") return "text-emerald-400 font-semibold";
+  if (s === "DISCONNECTED") return "text-red-400";
+  return "text-amber-400";
+};
+
 export default function ConnectedAccounts() {
   const [accounts, setAccounts]       = useState<Account[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -57,6 +76,14 @@ export default function ConnectedAccounts() {
   const [testing, setTesting]         = useState<Record<number, boolean>>({});
   const [syncing, setSyncing]         = useState<Record<number, boolean>>({});
   const [syncErrors, setSyncErrors]   = useState<Record<number, string>>({});
+
+  // Diagnose modal state
+  const [diagAccount, setDiagAccount]       = useState<Account | null>(null);
+  const [diagStatus, setDiagStatus]         = useState<MetaApiStatus | null>(null);
+  const [diagLoading, setDiagLoading]       = useState(false);
+  const [redeploying, setRedeploying]       = useState(false);
+  const [redeploySteps, setRedeploySteps]   = useState<string[]>([]);
+
   const [form, setForm] = useState({
     accountName: "", mt5Login: "", tradingPassword: "", investorPassword: "",
     server: "XMTrading-MT5", brokerName: "XM", accountType: "Ultra Low Standard", leverage: "1:1000",
@@ -96,7 +123,7 @@ export default function ConnectedAccounts() {
         const msg = data.hint ?? data.error ?? `Sync failed (${r.status})`;
         setSyncErrors(prev => ({ ...prev, [id]: msg }));
       }
-      await load(); // refresh balance from DB
+      await load();
     } catch {
       setSyncErrors(prev => ({ ...prev, [id]: "Network error — check Railway is running" }));
     } finally {
@@ -113,14 +140,48 @@ export default function ConnectedAccounts() {
         ...prev,
         [id]: { ok: data.success, ms: data.latencyMs, isLive: data.isLive, message: data.message, state: data.state, connectionStatus: data.connectionStatus },
       }));
-      // Refresh verificationStatus badge and then auto-sync balance
       await load();
       if (data.success && data.isLive) {
-        // Fire balance sync in background — don't block the verify flow
         syncBalance(id);
       }
     } finally {
       setTesting(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const openDiagnose = async (acc: Account) => {
+    setDiagAccount(acc);
+    setDiagStatus(null);
+    setRedeploySteps([]);
+    setDiagLoading(true);
+    try {
+      const r = await rpGet(`/api/refer-project/accounts/${acc.id}/metaapi-status`);
+      const data = await r.json() as MetaApiStatus;
+      setDiagStatus(data);
+    } catch {
+      setDiagStatus({ metaApiAccountId: null, state: null, connectionStatus: null, region: null, error: "Network error reaching Railway" });
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
+  const forceRedeploy = async () => {
+    if (!diagAccount) return;
+    setRedeploying(true);
+    setRedeploySteps([]);
+    try {
+      const r = await rpPost(`/api/refer-project/accounts/${diagAccount.id}/force-redeploy`);
+      const data = await r.json() as { success?: boolean; steps?: string[]; error?: string; details?: string };
+      if (data.steps) setRedeploySteps(data.steps);
+      // Refresh status after redeploy
+      setTimeout(async () => {
+        const r2 = await rpGet(`/api/refer-project/accounts/${diagAccount.id}/metaapi-status`);
+        if (r2.ok) setDiagStatus(await r2.json());
+      }, 4000);
+    } catch {
+      setRedeploySteps(["Network error — could not reach Railway"]);
+    } finally {
+      setRedeploying(false);
     }
   };
 
@@ -239,6 +300,10 @@ export default function ConnectedAccounts() {
                         className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-emerald-400 transition-colors disabled:opacity-50">
                         {isSyncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <DollarSign className="w-3 h-3" />}
                       </button>
+                      <button onClick={() => openDiagnose(acc)} title="Diagnose MetaApi connection"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-amber-400 transition-colors">
+                        <Stethoscope className="w-3 h-3" />
+                      </button>
                       <button onClick={() => deleteAccount(acc.id)} title="Delete"
                         className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors">
                         <Trash2 className="w-3 h-3" />
@@ -251,6 +316,132 @@ export default function ConnectedAccounts() {
           </tbody>
         </table>
       </div>
+
+      {/* Diagnose modal */}
+      {diagAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-amber-400" />
+                  MetaApi Diagnostics — {diagAccount.accountName}
+                </h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Live status from MetaApi provisioning API</p>
+              </div>
+              <button onClick={() => setDiagAccount(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {diagLoading && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-4">
+                <Loader2 className="w-4 h-4 animate-spin" /> Fetching MetaApi status…
+              </div>
+            )}
+
+            {diagStatus && !diagLoading && (
+              <div className="space-y-3">
+                {/* Status grid */}
+                <div className="bg-accent/30 rounded-lg p-4 space-y-2 text-xs font-mono">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    <span className="text-muted-foreground">State</span>
+                    <span className={diagStatus.state === "DEPLOYED" ? "text-amber-400" : diagStatus.state === "CONNECTED" ? "text-emerald-400" : "text-foreground"}>
+                      {diagStatus.state ?? "—"}
+                    </span>
+
+                    <span className="text-muted-foreground">Connection</span>
+                    <span className={connStatusColor(diagStatus.connectionStatus)}>
+                      {diagStatus.connectionStatus ?? "—"}
+                    </span>
+
+                    <span className="text-muted-foreground">MetaApi server</span>
+                    <span className={diagStatus.server && diagStatus.server !== diagAccount.server ? "text-red-400" : "text-foreground"}>
+                      {diagStatus.server ?? "—"}
+                      {diagStatus.server && diagStatus.server !== diagAccount.server && (
+                        <span className="text-red-400 ml-1">⚠ mismatch!</span>
+                      )}
+                    </span>
+
+                    <span className="text-muted-foreground">DB server</span>
+                    <span>{diagAccount.server}</span>
+
+                    <span className="text-muted-foreground">Region</span>
+                    <span>{diagStatus.region ?? "—"}</span>
+
+                    <span className="text-muted-foreground">Account ID</span>
+                    <span className="text-[10px] break-all">{diagStatus.metaApiAccountId ?? "—"}</span>
+                  </div>
+                </div>
+
+                {/* Message */}
+                {diagStatus.message && (
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{diagStatus.message}</p>
+                )}
+                {diagStatus.error && (
+                  <p className="text-[11px] text-red-400 leading-relaxed">{diagStatus.error}</p>
+                )}
+
+                {/* Diagnosis */}
+                {diagStatus.connectionStatus !== "CONNECTED" && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-[11px] text-amber-300 space-y-1">
+                    <p className="font-semibold">Why is it stuck on DEPLOYED?</p>
+                    {diagStatus.server && diagStatus.server !== diagAccount.server ? (
+                      <p>
+                        Server mismatch: MetaApi has <strong>"{diagStatus.server}"</strong> but your DB has <strong>"{diagAccount.server}"</strong>.
+                        MetaApi can't reach the broker because it's connecting to the wrong server.
+                        Click <strong>Fix & Redeploy</strong> below to patch it.
+                      </p>
+                    ) : (
+                      <p>
+                        Server names match ("{diagAccount.server}"). The broker may be unreachable for another reason —
+                        wrong trading password, account suspended by XM, or MetaApi infrastructure delay.
+                        Try <strong>Force Redeploy</strong> to restart the broker connection.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Redeploy steps */}
+                {redeploySteps.length > 0 && (
+                  <div className="bg-accent/20 rounded-lg p-3 space-y-1">
+                    {redeploySteps.map((s, i) => (
+                      <p key={i} className={`text-[11px] font-mono ${s.startsWith("✅") ? "text-emerald-400" : s.startsWith("⚠") ? "text-amber-400" : "text-muted-foreground"}`}>{s}</p>
+                    ))}
+                    {redeploySteps.some(s => s.includes("Deploy requested")) && (
+                      <p className="text-[11px] text-muted-foreground mt-1">MetaApi will attempt broker reconnect. Wait 2–3 min then click the $ button to sync balance.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => openDiagnose(diagAccount)}
+                disabled={diagLoading}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${diagLoading ? "animate-spin" : ""}`} /> Refresh Status
+              </button>
+              <button
+                onClick={forceRedeploy}
+                disabled={redeploying || diagLoading || !diagStatus?.metaApiAccountId}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+              >
+                {redeploying ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                {diagStatus?.server && diagStatus.server !== diagAccount.server ? "Fix Server & Redeploy" : "Force Redeploy"}
+              </button>
+              <button
+                onClick={() => { setDiagAccount(null); syncBalance(diagAccount.id); }}
+                className="ml-auto flex items-center gap-1.5 px-3 py-2 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors"
+              >
+                <DollarSign className="w-3 h-3" /> Sync Balance
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add account modal */}
       {showAdd && (
@@ -269,7 +460,7 @@ export default function ConnectedAccounts() {
               {[
                 { key: "accountName",      label: "Account Name *",   placeholder: "e.g. My XM Account 1" },
                 { key: "mt5Login",         label: "MT5 Login *",      placeholder: "e.g. 12345678" },
-                { key: "server",           label: "Server *",          placeholder: "XMTrading-MT5" },
+                { key: "server",           label: "Server *",          placeholder: "XMGlobal-MT5 6" },
                 { key: "tradingPassword",  label: "Trading Password",  placeholder: "••••••••", type: "password" },
                 { key: "investorPassword", label: "Investor Password", placeholder: "••••••••", type: "password" },
                 { key: "brokerName",       label: "Broker",            placeholder: "XM" },
@@ -289,7 +480,7 @@ export default function ConnectedAccounts() {
               ))}
             </div>
             <p className="text-[10px] text-muted-foreground mt-3">
-              Tip: enter your Trading Password to enable live MetaApi balance &amp; position data. Click the Wifi icon to verify after adding.
+              Tip: use the exact server name from your XM MT5 terminal (e.g. XMGlobal-MT5 6). Enter Trading Password to enable live balance sync.
             </p>
             <div className="flex gap-2 mt-4">
               <button onClick={() => setShowAdd(false)}

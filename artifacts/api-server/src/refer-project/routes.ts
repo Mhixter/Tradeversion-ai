@@ -385,6 +385,97 @@ router.get("/refer-project/accounts/:id/mt5-history", async (req, res) => {
   } catch (err) { req.log.error(err); res.status(500).json({ error: "Failed to fetch MT5 history", details: String(err) }); }
 });
 
+/* ─── Force redeploy — patch server name if mismatched, undeploy + redeploy ─ */
+router.post("/refer-project/accounts/:id/force-redeploy", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return void res.status(400).json({ error: "Invalid account id" });
+
+    const [account] = await db.select().from(rpAccountsTable).where(eq(rpAccountsTable.id, id)).limit(1);
+    if (!account) return void res.status(404).json({ error: "Account not found" });
+
+    const token = process.env.METAAPI_TOKEN;
+    if (!token) return void res.status(503).json({ error: "METAAPI_TOKEN not configured" });
+    if (!account.metaApiAccountId) {
+      return void res.status(422).json({ error: "No MetaApi account ID — click Verify first" });
+    }
+
+    const headers = { "auth-token": token, "Content-Type": "application/json" };
+    const provBase = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
+    const accUrl   = `${provBase}/users/current/accounts/${account.metaApiAccountId}`;
+    const steps: string[] = [];
+
+    // Step 1: fetch current MetaApi account details
+    const provRes = await fetch(accUrl, { headers });
+    if (!provRes.ok) {
+      return void res.status(502).json({ error: "Cannot reach MetaApi provisioning", status: provRes.status });
+    }
+    const provAcc = await provRes.json() as {
+      id: string; login?: string; server?: string; state?: string;
+      connectionStatus?: string; region?: string; name?: string; platform?: string;
+      magic?: number; quoteStreamingIntervalInSeconds?: number; tags?: string[];
+      resourceSlots?: number; copyFactoryResourceSlots?: number; riskManagementApiEnabled?: boolean;
+      manualTrades?: boolean; reliability?: string; baseCurrency?: string;
+    };
+
+    steps.push(`Current state: ${provAcc.state} / ${provAcc.connectionStatus} (server: "${provAcc.server}")`);
+
+    // Step 2: patch server name if different from DB
+    const dbServer = account.server;
+    if (provAcc.server && provAcc.server !== dbServer) {
+      steps.push(`Server mismatch detected: MetaApi="${provAcc.server}" DB="${dbServer}" — patching MetaApi`);
+      const patchRes = await fetch(accUrl, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          ...provAcc,
+          server: dbServer,
+        }),
+      });
+      if (patchRes.ok || patchRes.status === 204) {
+        steps.push(`✅ Server patched to "${dbServer}"`);
+      } else {
+        const pt = await patchRes.text().catch(() => "");
+        steps.push(`⚠️ Patch failed (${patchRes.status}): ${pt.slice(0, 200)} — continuing anyway`);
+      }
+    } else {
+      steps.push(`Server names match ("${dbServer}") — no patch needed`);
+    }
+
+    // Step 3: undeploy
+    const undeployRes = await fetch(`${accUrl}/undeploy`, { method: "POST", headers });
+    if (undeployRes.ok || undeployRes.status === 204) {
+      steps.push("✅ Undeploy requested");
+    } else {
+      const ut = await undeployRes.text().catch(() => "");
+      steps.push(`Undeploy returned ${undeployRes.status}: ${ut.slice(0, 100)}`);
+    }
+
+    // Step 4: wait 3s for undeploy to settle
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Step 5: redeploy
+    const deployRes = await fetch(`${accUrl}/deploy`, { method: "POST", headers });
+    if (deployRes.ok || deployRes.status === 204) {
+      steps.push("✅ Deploy requested — MetaApi will now reconnect to broker");
+    } else {
+      const dt = await deployRes.text().catch(() => "");
+      steps.push(`Deploy returned ${deployRes.status}: ${dt.slice(0, 100)}`);
+    }
+
+    await rpLog({
+      event: "CONNECTION", accountId: id, level: "info",
+      message: `Force redeploy triggered`,
+      details: { steps, dbServer, metaApiServer: provAcc.server },
+    });
+
+    res.json({ success: true, steps });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Force redeploy failed", details: String(err) });
+  }
+});
+
 /* ─── MetaApi diagnostic — quick provisioning status for an account ─────── */
 router.get("/refer-project/accounts/:id/metaapi-status", async (req, res) => {
   try {
