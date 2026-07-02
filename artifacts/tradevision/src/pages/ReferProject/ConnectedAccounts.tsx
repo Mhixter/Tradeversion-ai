@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, WifiOff, Loader2 } from "lucide-react";
+import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, WifiOff, Loader2, DollarSign } from "lucide-react";
 import { rpGet, rpPost, rpDelete } from "./rpApi";
 
 interface Account {
@@ -55,6 +55,8 @@ export default function ConnectedAccounts() {
   const [showAdd, setShowAdd]         = useState(false);
   const [testResults, setTestResults] = useState<Record<number, TestResult>>({});
   const [testing, setTesting]         = useState<Record<number, boolean>>({});
+  const [syncing, setSyncing]         = useState<Record<number, boolean>>({});
+  const [syncErrors, setSyncErrors]   = useState<Record<number, string>>({});
   const [form, setForm] = useState({
     accountName: "", mt5Login: "", tradingPassword: "", investorPassword: "",
     server: "XMTrading-MT5", brokerName: "XM", accountType: "Ultra Low Standard", leverage: "1:1000",
@@ -84,6 +86,24 @@ export default function ConnectedAccounts() {
     load();
   };
 
+  const syncBalance = useCallback(async (id: number) => {
+    setSyncing(prev => ({ ...prev, [id]: true }));
+    setSyncErrors(prev => ({ ...prev, [id]: "" }));
+    try {
+      const r = await rpPost(`/api/refer-project/accounts/${id}/sync-balance`);
+      const data = await r.json() as { success?: boolean; balance?: number; equity?: number; error?: string; details?: string; hint?: string };
+      if (!r.ok || !data.success) {
+        const msg = data.hint ?? data.error ?? `Sync failed (${r.status})`;
+        setSyncErrors(prev => ({ ...prev, [id]: msg }));
+      }
+      await load(); // refresh balance from DB
+    } catch {
+      setSyncErrors(prev => ({ ...prev, [id]: "Network error — check Railway is running" }));
+    } finally {
+      setSyncing(prev => ({ ...prev, [id]: false }));
+    }
+  }, [load]);
+
   const testConnection = async (id: number) => {
     setTesting(prev => ({ ...prev, [id]: true }));
     try {
@@ -93,8 +113,12 @@ export default function ConnectedAccounts() {
         ...prev,
         [id]: { ok: data.success, ms: data.latencyMs, isLive: data.isLive, message: data.message, state: data.state, connectionStatus: data.connectionStatus },
       }));
-      // Refresh so verificationStatus badge updates
+      // Refresh verificationStatus badge and then auto-sync balance
       await load();
+      if (data.success && data.isLive) {
+        // Fire balance sync in background — don't block the verify flow
+        syncBalance(id);
+      }
     } finally {
       setTesting(prev => ({ ...prev, [id]: false }));
     }
@@ -148,6 +172,8 @@ export default function ConnectedAccounts() {
             {accounts.map(acc => {
               const tr = testResults[acc.id];
               const isTesting = testing[acc.id] ?? false;
+              const isSyncing = syncing[acc.id] ?? false;
+              const syncErr   = syncErrors[acc.id] ?? "";
               return (
                 <tr key={acc.id} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
                   <td className="px-4 py-3 font-mono text-muted-foreground text-[11px]">#{acc.id}</td>
@@ -156,7 +182,17 @@ export default function ConnectedAccounts() {
                   <td className="px-4 py-3 text-muted-foreground text-[11px]">{acc.server}</td>
                   <td className="px-4 py-3">{acc.accountType}</td>
                   <td className="px-4 py-3">{acc.leverage}</td>
-                  <td className="px-4 py-3 font-mono">${parseFloat(acc.balance).toFixed(2)}</td>
+                  <td className="px-4 py-3 font-mono">
+                    <div className="flex items-center gap-1">
+                      <span className={isSyncing ? "opacity-50" : ""}>${parseFloat(acc.balance).toFixed(2)}</span>
+                      {isSyncing && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+                    </div>
+                    {syncErr && (
+                      <div className="text-[9px] text-red-400 max-w-[140px] leading-tight mt-0.5" title={syncErr}>
+                        ⚠ {syncErr.length > 50 ? syncErr.slice(0, 50) + "…" : syncErr}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-mono">${parseFloat(acc.equity).toFixed(2)}</td>
                   {/* MetaApi verification column */}
                   <td className="px-4 py-3">
@@ -198,6 +234,10 @@ export default function ConnectedAccounts() {
                       <button onClick={() => testConnection(acc.id)} title="Verify via MetaApi" disabled={isTesting}
                         className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-primary transition-colors disabled:opacity-50">
                         {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wifi className="w-3 h-3" />}
+                      </button>
+                      <button onClick={() => syncBalance(acc.id)} title="Sync live balance from broker" disabled={isSyncing}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-emerald-400 transition-colors disabled:opacity-50">
+                        {isSyncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <DollarSign className="w-3 h-3" />}
                       </button>
                       <button onClick={() => deleteAccount(acc.id)} title="Delete"
                         className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors">

@@ -350,7 +350,7 @@ export class MetaApiRestConnector {
    * DOES NOT create accounts — account creation requires a higher-tier MetaApi plan.
    * If the account is not found at all, throws a clear error directing the user to click Verify.
    */
-  private async provision(): Promise<boolean> {
+  async provision(): Promise<boolean> {
     // Fetch all MetaApi accounts for this token so we can search by login
     type MetaApiAccount = { id: string; login?: string; server?: string; region?: string; state?: string; connectionStatus?: string };
     const allAccounts = await this.provFetch<MetaApiAccount[]>("/users/current/accounts?limit=100");

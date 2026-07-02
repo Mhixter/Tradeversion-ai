@@ -224,6 +224,99 @@ router.post("/refer-project/accounts/:id/test-connection", async (req, res) => {
   } catch (err) { req.log.error(err); res.status(500).json({ error: "Test failed" }); }
 });
 
+/* ─── Live balance sync (bypasses worker — calls MetaApi client API directly) ── */
+router.post("/refer-project/accounts/:id/sync-balance", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return void res.status(400).json({ error: "Invalid account id" });
+
+    const [account] = await db.select().from(rpAccountsTable).where(eq(rpAccountsTable.id, id)).limit(1);
+    if (!account) return void res.status(404).json({ error: "Account not found" });
+
+    const token = process.env.METAAPI_TOKEN;
+    if (!token) {
+      return void res.status(503).json({
+        error: "METAAPI_TOKEN not configured on this server",
+        hint: "Add METAAPI_TOKEN to Railway environment variables → Deploy",
+      });
+    }
+
+    if (!account.tradingPassword) {
+      return void res.status(422).json({
+        error: "No trading password stored for this account",
+        hint: "Edit the account and enter the MT5 trading password",
+      });
+    }
+
+    // Instantiate connector (no worker — direct in-request call)
+    const connector = new MetaApiRestConnector(
+      token, account.mt5Login, account.tradingPassword, account.server,
+      account.accountName, id, account.metaApiAccountId ?? null,
+    );
+
+    // Step 1: provision — finds account by login/stored-ID, saves ID to DB, resolves region
+    try {
+      await connector.provision();
+    } catch (provErr: unknown) {
+      const msg = String(provErr);
+      return void res.status(502).json({
+        error: "MetaApi provisioning failed",
+        details: msg,
+        hint: msg.includes("not found in MetaApi account list")
+          ? "Click the Verify (wifi) button first to register this account with MetaApi, then try Sync Balance"
+          : "Check that METAAPI_TOKEN is valid and the MT5 login is correct",
+      });
+    }
+
+    // Step 2: fetch live balance from client API (requires broker to be CONNECTED on MetaApi side)
+    let info: { balance: number; equity: number; margin: number; freeMargin: number };
+    try {
+      info = await connector.getAccountInfo();
+    } catch (balErr: unknown) {
+      const msg = String(balErr);
+      const hint =
+        msg.includes("404")
+          ? "MetaApi account ID not found — click Verify, then Sync Balance again"
+          : msg.includes("401") || msg.includes("403")
+          ? "METAAPI_TOKEN rejected — check it hasn't expired in Railway env vars"
+          : "MetaApi broker connection not yet established — this can take 2–5 min after first deploy. Start the worker and wait, or try again in a minute.";
+      // Try deploying the account so MetaApi starts connecting to broker in background
+      try {
+        await connector.connect(); // deploy best-effort; ignore result
+      } catch { /* ignore */ }
+      return void res.status(502).json({ error: "Broker not yet connected on MetaApi", details: msg, hint });
+    }
+
+    // Persist real balance to DB
+    await db.update(rpAccountsTable)
+      .set({
+        balance:          String(info.balance.toFixed(2)),
+        equity:           String(info.equity.toFixed(2)),
+        connectionStatus: "connected",
+        lastSyncTime:     new Date(),
+        updatedAt:        new Date(),
+      })
+      .where(eq(rpAccountsTable.id, id));
+
+    await rpLog({
+      event: "CONNECTION", accountId: id, level: "info",
+      message: `Live balance synced: ${info.balance.toFixed(2)} | Equity: ${info.equity.toFixed(2)}`,
+      details: { balance: info.balance, equity: info.equity, freeMargin: info.freeMargin },
+    });
+
+    res.json({
+      success: true,
+      balance:    info.balance,
+      equity:     info.equity,
+      margin:     info.margin,
+      freeMargin: info.freeMargin,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Balance sync failed", details: String(err) });
+  }
+});
+
 /* ─── Real MT5 History (live from MetaApi) ───────────────────────────────── */
 router.get("/refer-project/accounts/:id/mt5-history", async (req, res) => {
   try {
