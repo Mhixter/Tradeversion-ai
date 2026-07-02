@@ -15,14 +15,22 @@ interface TestResult {
   message?: string; state?: string; connectionStatus?: string;
 }
 
+interface MatchingAccount {
+  id: string; state: unknown; connectionStatus: unknown;
+  server: unknown; region: unknown; isStoredId: boolean;
+}
+
 interface MetaApiStatus {
   metaApiAccountId: string | null;
   state: string | null;
   connectionStatus: string | null;
   region: string | null;
   server?: string | null;
-  version?: number | null;
-  clientApiUrl?: string;
+  dbServer?: string;
+  dbLogin?: string;
+  matchingAccounts?: MatchingAccount[];
+  rawMetaApiAccount?: Record<string, unknown>;
+  diagnosis?: string;
   message?: string;
   error?: string;
 }
@@ -389,23 +397,49 @@ export default function ConnectedAccounts() {
                 )}
 
                 {/* Diagnosis */}
-                {diagStatus.connectionStatus !== "CONNECTED" && (
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-[11px] text-amber-300 space-y-1">
-                    <p className="font-semibold">Why is it stuck on DEPLOYED?</p>
-                    {diagStatus.server && diagStatus.server !== diagAccount.server ? (
-                      <p>
-                        Server mismatch: MetaApi has <strong>"{diagStatus.server}"</strong> but your DB has <strong>"{diagAccount.server}"</strong>.
-                        MetaApi can't reach the broker because it's connecting to the wrong server.
-                        Click <strong>Fix & Redeploy</strong> below to patch it.
-                      </p>
-                    ) : (
-                      <p>
-                        Server names match ("{diagAccount.server}"). The broker may be unreachable for another reason —
-                        wrong trading password, account suspended by XM, or MetaApi infrastructure delay.
-                        Try <strong>Force Redeploy</strong> to restart the broker connection.
-                      </p>
-                    )}
+                {diagStatus.diagnosis && (
+                  <div className={`border rounded-lg p-3 text-[11px] space-y-1 ${
+                    diagStatus.diagnosis.startsWith("✅")
+                      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                      : diagStatus.diagnosis.startsWith("❌")
+                      ? "bg-red-500/10 border-red-500/20 text-red-300"
+                      : "bg-amber-500/10 border-amber-500/20 text-amber-300"
+                  }`}>
+                    <p className="font-semibold">Diagnosis</p>
+                    <p>{diagStatus.diagnosis}</p>
                   </div>
+                )}
+
+                {/* All matching MetaApi accounts for this login */}
+                {diagStatus.matchingAccounts && diagStatus.matchingAccounts.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-1.5">All MetaApi accounts with login {diagAccount.mt5Login}:</p>
+                    <div className="space-y-1">
+                      {diagStatus.matchingAccounts.map((ma) => (
+                        <div key={String(ma.id)} className={`flex items-center gap-2 text-[10px] font-mono px-2 py-1 rounded ${ma.isStoredId ? "bg-primary/10 border border-primary/20" : "bg-accent/30"}`}>
+                          <span className={ma.connectionStatus === "CONNECTED" ? "text-emerald-400" : "text-amber-400"}>
+                            {String(ma.connectionStatus ?? "?")}
+                          </span>
+                          <span className="text-muted-foreground">{String(ma.state ?? "?")}</span>
+                          <span className="text-foreground truncate flex-1">{String(ma.id)}</span>
+                          <span className="text-muted-foreground">{String(ma.server ?? "?")}</span>
+                          {ma.isStoredId && <span className="text-primary">← in use</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Full raw MetaApi JSON */}
+                {diagStatus.rawMetaApiAccount && (
+                  <details className="text-[10px]">
+                    <summary className="text-muted-foreground cursor-pointer hover:text-foreground select-none">
+                      Full MetaApi response (click to expand)
+                    </summary>
+                    <pre className="mt-2 bg-black/40 rounded p-2 overflow-auto max-h-48 text-[9px] text-emerald-300 whitespace-pre-wrap break-all">
+                      {JSON.stringify(diagStatus.rawMetaApiAccount, null, 2)}
+                    </pre>
+                  </details>
                 )}
 
                 {/* Redeploy steps */}

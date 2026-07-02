@@ -482,7 +482,7 @@ router.post("/refer-project/accounts/:id/force-redeploy", async (req, res) => {
   }
 });
 
-/* ─── MetaApi diagnostic — quick provisioning status for an account ─────── */
+/* ─── MetaApi diagnostic — full raw provisioning status for an account ──── */
 router.get("/refer-project/accounts/:id/metaapi-status", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -494,47 +494,71 @@ router.get("/refer-project/accounts/:id/metaapi-status", async (req, res) => {
     const token = process.env.METAAPI_TOKEN;
     if (!token) return void res.status(503).json({ error: "METAAPI_TOKEN not configured", metaApiAccountId: null });
 
+    const provBase = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
+    const headers  = { "auth-token": token, "Content-Type": "application/json" };
+
     if (!account.metaApiAccountId) {
       return void res.json({
-        metaApiAccountId: null,
-        state: null, connectionStatus: null, region: null,
+        metaApiAccountId: null, state: null, connectionStatus: null, region: null,
         message: "Not yet provisioned — click Verify to register this account with MetaApi.",
       });
     }
 
-    // Fetch live state from MetaApi provisioning API
-    const headers = { "auth-token": token, "Content-Type": "application/json" };
-    const provUrl = `https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${account.metaApiAccountId}`;
-    try {
-      const provRes = await fetch(provUrl, { headers });
-      if (!provRes.ok) {
-        const text = await provRes.text().catch(() => "");
-        return void res.json({
-          metaApiAccountId: account.metaApiAccountId,
-          state: null, connectionStatus: null, region: null,
-          error: `Provisioning API returned ${provRes.status}`,
-          message: text,
-        });
+    // Fetch full raw account details AND all accounts simultaneously
+    const [accRes, allRes] = await Promise.all([
+      fetch(`${provBase}/users/current/accounts/${account.metaApiAccountId}`, { headers }),
+      fetch(`${provBase}/users/current/accounts?limit=100`, { headers }),
+    ]);
+
+    const rawAcc  = accRes.ok  ? await accRes.json()  : null;
+    const allAccs = allRes.ok  ? await allRes.json() as Array<Record<string, unknown>> : [];
+
+    // Find all MetaApi accounts that share this MT5 login
+    const matchingByLogin = allAccs
+      .filter(a => String(a.login) === String(account.mt5Login))
+      .map(a => ({
+        id:               a.id,
+        state:            a.state,
+        connectionStatus: a.connectionStatus,
+        server:           a.server,
+        region:           a.region,
+        isStoredId:       a.id === account.metaApiAccountId,
+      }));
+
+    // Derive a plain-English diagnosis
+    let diagnosis = "";
+    if (rawAcc) {
+      const cs   = String(rawAcc.connectionStatus ?? "");
+      const srv  = String(rawAcc.server ?? "");
+      const dbSrv = account.server;
+      if (cs === "CONNECTED") {
+        diagnosis = "✅ Broker is connected — balance sync should work.";
+      } else if (srv && srv !== dbSrv) {
+        diagnosis = `❌ Server mismatch: MetaApi has "${srv}" but DB has "${dbSrv}". This is why it won't connect. Click Fix & Redeploy.`;
+      } else if (rawAcc.state === "DEPLOYED") {
+        diagnosis = `⏳ Account is DEPLOYED but broker not connected after ${Math.round((Date.now() - new Date(account.createdAt).getTime()) / 60000)} min. Either the password is wrong, the server name is wrong on MetaApi, or the XM account is suspended. Check app.metaapi.cloud for the exact error.`;
+      } else {
+        diagnosis = `State: ${rawAcc.state} / ${rawAcc.connectionStatus}`;
       }
-      const acc = await provRes.json() as {
-        id?: string; state?: string; connectionStatus?: string;
-        region?: string; server?: string; version?: number;
-      };
-      return void res.json({
-        metaApiAccountId: account.metaApiAccountId,
-        state:            acc.state,
-        connectionStatus: acc.connectionStatus,
-        region:           acc.region,
-        server:           acc.server,
-        version:          acc.version,
-        clientApiUrl:     `https://mt-client-api-v1.${acc.region ?? "london"}.agiliumtrade.agiliumtrade.ai`,
-        message: acc.connectionStatus === "CONNECTED"
-          ? `✅ MetaApi connected (region: ${acc.region ?? "unknown"})`
-          : `⏳ MetaApi state=${acc.state} connectionStatus=${acc.connectionStatus} — may still be deploying`,
-      });
-    } catch (fetchErr) {
-      return void res.status(502).json({ error: "Could not reach MetaApi provisioning API", details: String(fetchErr) });
+    } else {
+      diagnosis = `Could not fetch account details (HTTP ${accRes.status}).`;
     }
+
+    res.json({
+      metaApiAccountId: account.metaApiAccountId,
+      dbServer:         account.server,
+      dbLogin:          account.mt5Login,
+      // Key extracted fields for quick UI display
+      state:            rawAcc?.state            ?? null,
+      connectionStatus: rawAcc?.connectionStatus ?? null,
+      region:           rawAcc?.region           ?? null,
+      server:           rawAcc?.server           ?? null,
+      // ALL matching MetaApi accounts for this login (helps find a CONNECTED one)
+      matchingAccounts: matchingByLogin,
+      // Full raw MetaApi response — every field including any errorCode/errorMessage
+      rawMetaApiAccount: rawAcc ?? { fetchError: `HTTP ${accRes.status}` },
+      diagnosis,
+    });
   } catch (err) { req.log.error(err); res.status(500).json({ error: "MetaApi status check failed", details: String(err) }); }
 });
 
