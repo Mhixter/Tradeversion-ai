@@ -134,11 +134,26 @@ export class AccountWorker {
   private async tick(): Promise<void> {
     if (!this.running) return;
 
-    // Reconnect if needed (before anything else)
+    // If not connected to broker yet: try the client API.
+    // The worker stays running — MetaApi connects to the broker in the background.
     if (!this.connector.isConnected()) {
-      await rpLog({ event: "CONNECTION", accountId: this.accountId, message: "Reconnecting...", level: "warn" });
-      const ok = await this.connector.connect();
-      if (!ok) return;
+      if (this.usingMetaApi) {
+        const meta = this.connector as import("./metaApiConnector.js").MetaApiRestConnector;
+        await meta.syncRegionFromProvisioning();
+        // Try client API: if it works, mark connected; if not, silently wait for next tick
+        try {
+          await this.connector.getAccountInfo();
+          // Client API worked — mark connected and log
+          await rpLog({ event: "CONNECTION", accountId: this.accountId, level: "info",
+            message: `Account ${this.accountId} broker connection established — live data available` });
+        } catch {
+          // Not ready yet — skip this tick silently (no error spam while waiting for broker)
+          return;
+        }
+      } else {
+        // Simulated connector — just reconnect
+        await this.connector.connect();
+      }
     }
 
     /* 1. Always update account balance/equity — regardless of whether trading is enabled */

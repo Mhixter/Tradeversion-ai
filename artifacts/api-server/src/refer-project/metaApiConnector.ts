@@ -48,20 +48,25 @@ export class MetaApiRestConnector implements MT5Connector {
   /* ── Public interface ────────────────────────────────────────────────── */
 
   /**
-   * Connect to MetaApi and verify the client API is reachable.
-   * Returns { ok: true } on success, or { ok: false, error: "reason" } on failure.
-   * The error string is human-readable and safe to log directly to the Event Logs UI.
+   * Connect to MetaApi. Ensures the account is found and deployed, then returns immediately
+   * without waiting for the broker connection to be established. The tick loop handles
+   * retrying the client API on every cycle — this avoids a hard 120s startup timeout
+   * that causes the worker to permanently fail when the broker takes >2 min to connect.
+   *
+   * Returns { ok: true } if the account is found and deployed (or already connected).
+   * Returns { ok: false, error } only if the account cannot be found/provisioned at all.
    */
   async connect(): Promise<{ ok: boolean; error?: string }> {
     try {
-      // Step 1: Provision (find/create MetaApi account; sets this.region; returns true if already CONNECTED)
+      // Step 1: Find the account on MetaApi and set region. Returns true if already CONNECTED.
       const alreadyConnected = await this.provision();
       console.log(`[MetaApiConnector] provision done — alreadyConnected=${alreadyConnected} region=${this.region} id=${this.metaApiAccountId}`);
 
-      // Step 2: Ensure account is deployed (best-effort — ignore if already deployed)
+      // Step 2: Ensure the account is deployed (best-effort — MetaApi will connect to broker in background)
       if (!alreadyConnected) {
         try {
           await this.deployAccount();
+          console.log(`[MetaApiConnector] Deploy request sent — MetaApi will connect to broker in background`);
         } catch (deployErr: unknown) {
           const msg = String(deployErr);
           // 409 = already deploying; 422 = already deployed — both are fine
@@ -71,34 +76,19 @@ export class MetaApiRestConnector implements MT5Connector {
         }
       }
 
-      // Step 3: Try client API immediately across all known regions
+      // Step 3: Try the client API immediately (works when account is already connected)
       const reachable = await this.tryClientApiAllRegions();
       if (reachable) {
-        console.log(`[MetaApiConnector] Client API accessible (region=${this.region}) — connected!`);
+        console.log(`[MetaApiConnector] Client API accessible immediately (region=${this.region})`);
         this.connected = true;
         return { ok: true };
       }
 
-      // Step 4: Poll provisioning API for CONNECTED status (up to 2 minutes)
-      const provConnected = await this.waitConnected(120_000);
-      if (provConnected) {
-        // Re-sync region from provisioning (may have changed during deploy)
-        await this.syncRegionFromProvisioning();
-        const reachableAfterWait = await this.tryClientApiAllRegions();
-        if (reachableAfterWait) {
-          this.connected = true;
-          return { ok: true };
-        }
-        const errMsg = `Provisioning says CONNECTED (id=${this.metaApiAccountId} region=${this.region}) but client API unreachable in all regions tried: ${KNOWN_REGIONS.join(", ")}. MetaApi may be throttling or the account subscription may not include client API access.`;
-        console.warn(`[MetaApiConnector] ${errMsg}`);
-        this.connected = false;
-        return { ok: false, error: errMsg };
-      }
-
-      const errMsg = `MetaApi account did not reach CONNECTED state within 120s. Current state unknown — the account may still be deploying. Provisioning id=${this.metaApiAccountId} region=${this.region}.`;
-      console.warn(`[MetaApiConnector] ${errMsg}`);
-      this.connected = false;
-      return { ok: false, error: errMsg };
+      // Account is deployed but broker connection not yet established.
+      // Return ok=true so the worker starts — the tick loop will retry the client API every 30s.
+      console.log(`[MetaApiConnector] Account deployed (id=${this.metaApiAccountId} region=${this.region}) — waiting for broker connection. Tick loop will retry.`);
+      this.connected = false; // mark as not connected yet; tick loop will call connect() again when it is
+      return { ok: true };    // worker should stay running and keep retrying
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       // Only clear the stored MetaApi account ID when the provisioning API explicitly says
@@ -345,92 +335,62 @@ export class MetaApiRestConnector implements MT5Connector {
   }
 
   /**
-   * Find an existing MetaApi account matching our MT5 login+server,
-   * or create a new one. Saves the MetaApi account ID back to the DB.
-   * Returns true if the account is already CONNECTED (skip deploy step).
+   * Find an existing MetaApi account for this MT5 login. Saves the MetaApi account ID to DB.
+   * Returns true if the account is already CONNECTED (broker link established → can skip deploy).
+   *
+   * DOES NOT create accounts — account creation requires a higher-tier MetaApi plan.
+   * If the account is not found at all, throws a clear error directing the user to click Verify.
    */
   private async provision(): Promise<boolean> {
+    // Fetch all MetaApi accounts for this token so we can search by login
+    type MetaApiAccount = { id: string; login?: string; server?: string; region?: string; state?: string; connectionStatus?: string };
+    const allAccounts = await this.provFetch<MetaApiAccount[]>("/users/current/accounts?limit=100");
+
+    // If we have a stored ID, check its current state
     if (this.metaApiAccountId) {
-      // Already provisioned — just refresh region + check live state
-      try {
-        const acc = await this.provFetch<{ id: string; region?: string; state?: string; connectionStatus?: string }>(
-          `/users/current/accounts/${this.metaApiAccountId}`
-        );
-        this.region = acc.region ?? "london";
-        console.log(`[MetaApiConnector] Existing account state=${acc.state} connectionStatus=${acc.connectionStatus}`);
-        // If already deployed+connected, skip the /deploy call
-        if (acc.connectionStatus === "CONNECTED") return true;
-        return false;
-      } catch {
-        // If it errors (e.g. deleted on MetaApi side), fall through to re-provision
+      const stored = allAccounts.find(a => a.id === this.metaApiAccountId);
+      if (stored) {
+        this.region = stored.region ?? "london";
+        console.log(`[MetaApiConnector] Stored account id=${stored.id} state=${stored.state} connectionStatus=${stored.connectionStatus} region=${stored.region}`);
+        if (stored.connectionStatus === "CONNECTED") return true;
+        // Account found but not yet connected — fall through to check if another account for this login IS connected
+      }
+      // If stored ID not in list (deleted/rotated), clear it and search by login below
+      if (!stored) {
+        console.warn(`[MetaApiConnector] Stored id=${this.metaApiAccountId} not found in account list — searching by login`);
         this.metaApiAccountId = null;
       }
     }
 
-    if (!this.metaApiAccountId) {
-      // Search existing MetaApi accounts by login only (server names may differ slightly)
-      const accounts = await this.provFetch<Array<{ id: string; login?: string; server?: string; region?: string; connectionStatus?: string }>>(
-        "/users/current/accounts?limit=100"
+    // Search all accounts for this login, preferring the one that is currently CONNECTED
+    const byLogin = allAccounts.filter(a => String(a.login) === String(this.mt5Login));
+
+    if (byLogin.length === 0) {
+      throw new Error(
+        `MT5 login ${this.mt5Login} not found in MetaApi account list (searched ${allAccounts.length} accounts). ` +
+        `Please click the Verify (wifi icon) button to register this account with MetaApi first.`
       );
-      const existing = accounts.find(a => String(a.login) === String(this.mt5Login));
-
-      if (existing) {
-        this.metaApiAccountId = existing.id;
-        this.region = existing.region ?? "london";
-        console.log(`[MetaApiConnector] Found existing account by login: id=${existing.id} connectionStatus=${existing.connectionStatus}`);
-      } else {
-        // Create a new MetaApi cloud account; if server name is unknown, retry with suggested names
-        const payload = {
-          name:     this.accountName,
-          type:     "cloud-g2",
-          login:    this.mt5Login,
-          password: this.tradingPassword,
-          server:   this.server,
-          platform: "mt5",
-          magic:    0,   // required by MetaApi; 0 = observe all trades
-        };
-
-        let created: { id: string; region?: string };
-        try {
-          created = await this.provFetch<typeof created>("/users/current/accounts", "POST", payload);
-        } catch (err: unknown) {
-          // E_SRV_NOT_FOUND: MetaApi doesn't know this server name.
-          // Try each suggested server in turn until one authenticates successfully.
-          const details = (err as { details?: { code?: string; serversByBrokers?: Record<string, string[]> } }).details;
-          if (details?.code === "E_SRV_NOT_FOUND" && details.serversByBrokers) {
-            const suggested = Object.values(details.serversByBrokers).flat();
-            let lastErr: unknown = err;
-            created = undefined as unknown as typeof created;
-            for (const serverName of suggested) {
-              try {
-                console.warn(`[MetaApiConnector] Server "${this.server}" unknown — trying "${serverName}"`);
-                created = await this.provFetch<typeof created>("/users/current/accounts", "POST", {
-                  ...payload, server: serverName,
-                });
-                break; // success
-              } catch (retryErr: unknown) {
-                lastErr = retryErr;
-                const retryMsg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-                // E_AUTH means credentials rejected — this server exists but login is wrong; stop trying
-                if (retryMsg.includes("E_AUTH")) throw retryErr;
-                // otherwise keep trying next suggested server
-              }
-            }
-            if (!created) throw lastErr;
-          } else { throw err; }
-        }
-
-        this.metaApiAccountId = created.id;
-        this.region = created.region ?? "london";
-      }
-
-      // Persist MetaApi account ID to DB for reuse
-      await db.update(rpAccountsTable)
-        .set({ metaApiAccountId: this.metaApiAccountId, updatedAt: new Date() })
-        .where(eq(rpAccountsTable.id, this.dbAccountId));
     }
 
-    return false; // not yet confirmed connected — proceed with deploy
+    // Prefer CONNECTED > DEPLOYED > any other state
+    const connected = byLogin.find(a => a.connectionStatus === "CONNECTED");
+    const best = connected ?? byLogin[0];
+
+    if (connected && best.id !== this.metaApiAccountId) {
+      console.log(`[MetaApiConnector] Switching to CONNECTED account id=${best.id} (was ${this.metaApiAccountId ?? "null"})`);
+    } else {
+      console.log(`[MetaApiConnector] Using account id=${best.id} state=${best.state} connectionStatus=${best.connectionStatus}`);
+    }
+
+    this.metaApiAccountId = best.id;
+    this.region = best.region ?? "london";
+
+    // Persist the (possibly updated) MetaApi account ID to DB
+    await db.update(rpAccountsTable)
+      .set({ metaApiAccountId: this.metaApiAccountId, updatedAt: new Date() })
+      .where(eq(rpAccountsTable.id, this.dbAccountId));
+
+    return best.connectionStatus === "CONNECTED";
   }
 
   private async deployAccount(): Promise<void> {
