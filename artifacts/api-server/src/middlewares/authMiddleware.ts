@@ -62,26 +62,33 @@ export async function authMiddleware(
     return this.user != null;
   } as Request["isAuthenticated"];
 
-  const sid = getSessionId(req);
-  if (!sid) {
-    next();
-    return;
-  }
+  try {
+    const sid = getSessionId(req);
+    if (!sid) {
+      next();
+      return;
+    }
 
-  const session = await getSession(sid);
-  if (!session?.user?.id) {
-    await clearSession(res, sid);
-    next();
-    return;
-  }
+    const session = await getSession(sid);
+    if (!session?.user?.id) {
+      await clearSession(res, sid);
+      next();
+      return;
+    }
 
-  const refreshed = await refreshIfExpired(sid, session);
-  if (!refreshed) {
-    await clearSession(res, sid);
-    next();
-    return;
-  }
+    const refreshed = await refreshIfExpired(sid, session);
+    if (!refreshed) {
+      await clearSession(res, sid);
+      next();
+      return;
+    }
 
-  req.user = refreshed.user;
-  next();
+    req.user = refreshed.user;
+    next();
+  } catch (err) {
+    // Never let auth errors crash the request — just proceed as unauthenticated.
+    // Routes that require auth will reject with 401; routes with their own auth
+    // (like Refer Project Bearer token) will still work.
+    next();
+  }
 }
