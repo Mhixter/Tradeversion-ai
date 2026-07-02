@@ -107,6 +107,9 @@ export default function ConnectedAccounts() {
       setShowAdd(false);
       setForm({ accountName:"", mt5Login:"", tradingPassword:"", investorPassword:"", server:"XMTrading-MT5", brokerName:"XM", accountType:"Ultra Low Standard", leverage:"1:1000" });
       load();
+    } else {
+      const body = await r.json().catch(() => ({}));
+      alert(`Failed to add account (${r.status}): ${(body as { error?: string }).error ?? "Unknown error"}`);
     }
   };
 

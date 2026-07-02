@@ -21,6 +21,8 @@ const RP_ADMIN_PASS  = "Mhixter664@gmail.com";
 const VALID_TOKEN    = Buffer.from(`${RP_ADMIN_EMAIL}:${RP_ADMIN_PASS}`).toString("base64");
 
 function requireRPAdmin(req: Request, res: Response, next: NextFunction): void {
+  // Accept either: (a) valid Bearer token, or (b) an active OIDC session (req.user set by authMiddleware)
+  if (req.user) { next(); return; }
   const auth  = (req.headers["authorization"] ?? "") as string;
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
   if (token === VALID_TOKEN) { next(); return; }
