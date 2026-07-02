@@ -18,8 +18,8 @@ import { simulator } from "./mt5Connector.js";
 import type { Candle } from "./types.js";
 import { PIP_SIZE } from "./types.js";
 
-const PROVISIONING_URL = "https://mt-provisioning-api-v1.agiliumtrade.ai";
-const CLIENT_URL_TEMPLATE = "https://mt-client-api-v1.{region}.agiliumtrade.ai";
+const PROVISIONING_URL = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
+const CLIENT_URL_TEMPLATE = "https://mt-client-api-v1.{region}.agiliumtrade.agiliumtrade.ai";
 const DEPLOY_TIMEOUT_MS = 90_000; // 90 seconds
 const DEPLOY_POLL_MS    = 5_000;
 
@@ -46,23 +46,34 @@ export class MetaApiRestConnector implements MT5Connector {
   /* ── Public interface ────────────────────────────────────────────────── */
 
   async connect(): Promise<boolean> {
-    try {
-      // Step 1 — provision (find or create MetaApi account)
-      await this.provision();
-      // Step 2 — deploy
-      await this.deployAccount();
-      // Step 3 — wait until MetaApi reports CONNECTED
-      const ok = await this.waitConnected();
-      this.connected = ok;
-      return ok;
-    } catch (err: unknown) {
-      // Log concisely — full stack only in debug
-      const msg = err instanceof Error ? err.message : String(err);
-      const cause = (err as { cause?: { code?: string } })?.cause?.code;
-      console.warn(`[MetaApiConnector] connect failed (${cause ?? msg}) — falling back to simulation`);
-      this.connected = false;
-      return false;
+    // Two attempts: if deploy returns 404 (stale cached ID), clear and re-provision once.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await this.provision();
+        await this.deployAccount();
+        const ok = await this.waitConnected();
+        this.connected = ok;
+        return ok;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const is404Deploy = msg.includes("/deploy →") && msg.includes("404");
+        if (is404Deploy && attempt === 1) {
+          // Stale MetaApi account ID — wipe it and retry fresh
+          console.warn("[MetaApiConnector] deploy 404 (stale ID) — clearing and re-provisioning");
+          await db.update(rpAccountsTable)
+            .set({ metaApiAccountId: null, updatedAt: new Date() })
+            .where(eq(rpAccountsTable.id, this.dbAccountId));
+          this.metaApiAccountId = null;
+          continue;
+        }
+        const cause = (err as { cause?: { code?: string } })?.cause?.code;
+        console.warn(`[MetaApiConnector] connect failed (${cause ?? msg}) — falling back to simulation`);
+        this.connected = false;
+        return false;
+      }
     }
+    this.connected = false;
+    return false;
   }
 
   async disconnect(): Promise<void> {
@@ -153,7 +164,10 @@ export class MetaApiRestConnector implements MT5Connector {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new Error(`MetaApi provisioning ${method} ${path} → ${res.status}: ${text}`);
+      // Attach parsed JSON details to the error so callers can inspect them
+      const err = new Error(`MetaApi provisioning ${method} ${path} → ${res.status}: ${text}`) as Error & { details?: unknown; errorCode?: string };
+      try { const j = JSON.parse(text); err.details = j?.details; err.errorCode = j?.details?.code; } catch { /* ignore */ }
+      throw err;
     }
     if (res.status === 204 || res.headers.get("content-length") === "0") {
       return undefined as unknown as T;
@@ -197,31 +211,46 @@ export class MetaApiRestConnector implements MT5Connector {
     }
 
     if (!this.metaApiAccountId) {
-      // List existing accounts and look for a match
+      // Search existing MetaApi accounts by login only (server names may differ slightly)
       const accounts = await this.provFetch<Array<{ id: string; login?: string; server?: string; region?: string }>>(
         "/users/current/accounts?limit=100"
       );
-      const existing = accounts.find(
-        a => String(a.login) === String(this.mt5Login) && a.server === this.server
-      );
+      const existing = accounts.find(a => String(a.login) === String(this.mt5Login));
 
       if (existing) {
         this.metaApiAccountId = existing.id;
         this.region = existing.region ?? "london";
       } else {
-        // Create a new MetaApi cloud account
-        const created = await this.provFetch<{ id: string; region?: string }>(
-          "/users/current/accounts",
-          "POST",
-          {
-            name:     this.accountName,
-            type:     "cloud-g2",
-            login:    this.mt5Login,
-            password: this.tradingPassword,
-            server:   this.server,
-            platform: "mt5",
-          }
-        );
+        // Create a new MetaApi cloud account; if server name is unknown, retry with suggested names
+        const payload = {
+          name:     this.accountName,
+          type:     "cloud-g2",
+          login:    this.mt5Login,
+          password: this.tradingPassword,
+          server:   this.server,
+          platform: "mt5",
+          magic:    0,   // required by MetaApi; 0 = observe all trades
+        };
+
+        let created: { id: string; region?: string };
+        try {
+          created = await this.provFetch<typeof created>("/users/current/accounts", "POST", payload);
+        } catch (err: unknown) {
+          // E_SRV_NOT_FOUND: MetaApi doesn't know this server name.
+          // Parse the suggested names from the error details and retry with the first one.
+          const details = (err as { details?: { code?: string; serversByBrokers?: Record<string, string[]> } }).details;
+          if (details?.code === "E_SRV_NOT_FOUND" && details.serversByBrokers) {
+            const suggested = Object.values(details.serversByBrokers).flat();
+            if (suggested.length > 0) {
+              console.warn(`[MetaApiConnector] Server "${this.server}" unknown — retrying with "${suggested[0]}"`);
+              created = await this.provFetch<typeof created>("/users/current/accounts", "POST", {
+                ...payload,
+                server: suggested[0],
+              });
+            } else { throw err; }
+          } else { throw err; }
+        }
+
         this.metaApiAccountId = created.id;
         this.region = created.region ?? "london";
       }
