@@ -136,20 +136,21 @@ export default function ConnectedAccounts() {
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border bg-accent/30">
-              {["Account","MT5 Login","Server","Type","Leverage","Balance","Equity","MetaApi","Status","Actions"].map(h => (
+              {["#","Account","MT5 Login","Server","Type","Leverage","Balance","Equity","MetaApi","Status","Actions"].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-muted-foreground font-medium">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {accounts.length === 0 && (
-              <tr><td colSpan={10} className="text-center py-12 text-muted-foreground">No accounts added yet</td></tr>
+              <tr><td colSpan={11} className="text-center py-12 text-muted-foreground">No accounts added yet</td></tr>
             )}
             {accounts.map(acc => {
               const tr = testResults[acc.id];
               const isTesting = testing[acc.id] ?? false;
               return (
                 <tr key={acc.id} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
+                  <td className="px-4 py-3 font-mono text-muted-foreground text-[11px]">#{acc.id}</td>
                   <td className="px-4 py-3 font-medium">{acc.accountName}</td>
                   <td className="px-4 py-3 font-mono">{acc.mt5Login}</td>
                   <td className="px-4 py-3 text-muted-foreground text-[11px]">{acc.server}</td>

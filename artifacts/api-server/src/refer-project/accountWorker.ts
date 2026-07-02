@@ -66,13 +66,19 @@ export class AccountWorker {
         .set({ connectionStatus: "connecting", updatedAt: new Date() })
         .where(eq(rpAccountsTable.id, this.accountId));
 
-      let ok = await this.connector.connect();
+      // connect() now returns { ok, error? } so we can surface the real error in Event Logs
+      const connectResult = this.usingMetaApi
+        ? await (this.connector as import("./metaApiConnector.js").MetaApiRestConnector).connect()
+        : { ok: await this.connector.connect() };
+
+      const ok = connectResult.ok;
+      const connectError = "error" in connectResult ? connectResult.error : undefined;
 
       // If MetaApi connector fails, do NOT fall back to simulation.
-      // Surface the real error so the user can fix it (bad creds, egress block, etc.)
+      // Log the REAL error so the user can fix it without digging into Railway raw logs.
       if (!ok && this.usingMetaApi) {
         await rpLog({ event: "ERROR", accountId: this.accountId, level: "error",
-          message: `MetaApi connection failed for account ${this.accountId}. Check Railway Logs tab for the exact error. Common causes: wrong server name, wrong credentials, MetaApi account not yet deployed. Try stopping and restarting the worker.` });
+          message: `MetaApi connect failed: ${connectError ?? "unknown error"}` });
         this.running = false;
         await db.update(rpAccountsTable)
           .set({ connectionStatus: "error", status: "error", updatedAt: new Date() })

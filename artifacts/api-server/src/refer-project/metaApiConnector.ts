@@ -47,7 +47,12 @@ export class MetaApiRestConnector implements MT5Connector {
 
   /* ── Public interface ────────────────────────────────────────────────── */
 
-  async connect(): Promise<boolean> {
+  /**
+   * Connect to MetaApi and verify the client API is reachable.
+   * Returns { ok: true } on success, or { ok: false, error: "reason" } on failure.
+   * The error string is human-readable and safe to log directly to the Event Logs UI.
+   */
+  async connect(): Promise<{ ok: boolean; error?: string }> {
     try {
       // Step 1: Provision (find/create MetaApi account; sets this.region; returns true if already CONNECTED)
       const alreadyConnected = await this.provision();
@@ -66,36 +71,38 @@ export class MetaApiRestConnector implements MT5Connector {
         }
       }
 
-      // Step 3: Try client API immediately — if balance is fetchable, we're live
-      // Try all known regions in case the default is wrong
+      // Step 3: Try client API immediately across all known regions
       const reachable = await this.tryClientApiAllRegions();
       if (reachable) {
         console.log(`[MetaApiConnector] Client API accessible (region=${this.region}) — connected!`);
         this.connected = true;
-        return true;
+        return { ok: true };
       }
 
       // Step 4: Poll provisioning API for CONNECTED status (up to 2 minutes)
-      const ok = await this.waitConnected(120_000);
-      if (ok) {
+      const provConnected = await this.waitConnected(120_000);
+      if (provConnected) {
         // Re-sync region from provisioning (may have changed during deploy)
         await this.syncRegionFromProvisioning();
         const reachableAfterWait = await this.tryClientApiAllRegions();
         if (reachableAfterWait) {
           this.connected = true;
-          return true;
+          return { ok: true };
         }
-        console.warn(`[MetaApiConnector] Provisioning says CONNECTED but client API unreachable in any region (tried: ${KNOWN_REGIONS.join(", ")})`);
+        const errMsg = `Provisioning says CONNECTED (id=${this.metaApiAccountId} region=${this.region}) but client API unreachable in all regions tried: ${KNOWN_REGIONS.join(", ")}. MetaApi may be throttling or the account subscription may not include client API access.`;
+        console.warn(`[MetaApiConnector] ${errMsg}`);
+        this.connected = false;
+        return { ok: false, error: errMsg };
       }
 
-      console.warn("[MetaApiConnector] Could not reach MetaApi client API within timeout");
+      const errMsg = `MetaApi account did not reach CONNECTED state within 120s. Current state unknown — the account may still be deploying. Provisioning id=${this.metaApiAccountId} region=${this.region}.`;
+      console.warn(`[MetaApiConnector] ${errMsg}`);
       this.connected = false;
-      return false;
+      return { ok: false, error: errMsg };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       // Only clear the stored MetaApi account ID when the provisioning API explicitly says
       // the account ID doesn't exist (true 404 on /users/current/accounts/{id}).
-      // Do NOT clear on client-API failures — those are region/readiness issues.
       const isProvisioningNotFound = msg.includes("provisioning GET /users/current/accounts/") && msg.includes("404");
       if (isProvisioningNotFound) {
         console.warn("[MetaApiConnector] MetaApi account ID no longer exists — clearing for re-provision next restart");
@@ -103,9 +110,9 @@ export class MetaApiRestConnector implements MT5Connector {
           .set({ metaApiAccountId: null, updatedAt: new Date() })
           .where(eq(rpAccountsTable.id, this.dbAccountId));
       }
-      console.warn(`[MetaApiConnector] connect failed: ${msg}`);
+      console.warn(`[MetaApiConnector] connect threw: ${msg}`);
       this.connected = false;
-      return false;
+      return { ok: false, error: msg };
     }
   }
 
