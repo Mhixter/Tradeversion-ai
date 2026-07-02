@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, WifiOff, Loader2, DollarSign, Stethoscope, RotateCcw } from "lucide-react";
+import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, WifiOff, Loader2, DollarSign, Stethoscope, RotateCcw, Pencil } from "lucide-react";
 import { rpGet, rpPost, rpDelete } from "./rpApi";
 
 interface Account {
@@ -85,6 +85,11 @@ export default function ConnectedAccounts() {
   const [syncing, setSyncing]         = useState<Record<number, boolean>>({});
   const [syncErrors, setSyncErrors]   = useState<Record<number, string>>({});
 
+  // Edit modal state
+  const [editAccount, setEditAccount] = useState<Account | null>(null);
+  const [editForm, setEditForm]       = useState<Record<string, string>>({});
+  const [editSaving, setEditSaving]   = useState(false);
+
   // Diagnose modal state
   const [diagAccount, setDiagAccount]       = useState<Account | null>(null);
   const [diagStatus, setDiagStatus]         = useState<MetaApiStatus | null>(null);
@@ -155,6 +160,52 @@ export default function ConnectedAccounts() {
       }
     } finally {
       setTesting(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const openEdit = (acc: Account) => {
+    setEditAccount(acc);
+    setEditForm({
+      accountName:      acc.accountName,
+      mt5Login:         acc.mt5Login,
+      server:           acc.server,
+      tradingPassword:  "",
+      investorPassword: "",
+      brokerName:       acc.brokerName,
+      accountType:      acc.accountType,
+      leverage:         acc.leverage,
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editAccount) return;
+    setEditSaving(true);
+    try {
+      // Only send tradingPassword if user typed something
+      const body: Record<string, string> = {
+        accountName:  editForm.accountName,
+        mt5Login:     editForm.mt5Login,
+        server:       editForm.server,
+        brokerName:   editForm.brokerName,
+        accountType:  editForm.accountType,
+        leverage:     editForm.leverage,
+      };
+      if (editForm.tradingPassword)  body.tradingPassword  = editForm.tradingPassword;
+      if (editForm.investorPassword) body.investorPassword = editForm.investorPassword;
+      const r = await fetch(`/api/refer-project/accounts/${editAccount.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        alert(`Save failed: ${(d as {error?: string}).error ?? r.status}`);
+        return;
+      }
+      setEditAccount(null);
+      await load();
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -317,6 +368,10 @@ export default function ConnectedAccounts() {
                         className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-emerald-400 transition-colors disabled:opacity-50">
                         {isSyncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <DollarSign className="w-3 h-3" />}
                       </button>
+                      <button onClick={() => openEdit(acc)} title="Edit account / set password"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-blue-400 transition-colors">
+                        <Pencil className="w-3 h-3" />
+                      </button>
                       <button onClick={() => openDiagnose(acc)} title="Diagnose MetaApi connection"
                         className="w-7 h-7 flex items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-amber-400 transition-colors">
                         <Stethoscope className="w-3 h-3" />
@@ -333,6 +388,61 @@ export default function ConnectedAccounts() {
           </tbody>
         </table>
       </div>
+
+      {/* Edit account modal */}
+      {editAccount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-lg p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-sm font-bold">Edit Account — {editAccount.accountName}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Leave password blank to keep existing value</p>
+              </div>
+              <button onClick={() => setEditAccount(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {[
+                { key: "accountName",      label: "Account Name",      placeholder: "" },
+                { key: "mt5Login",         label: "MT5 Login",         placeholder: "" },
+                { key: "server",           label: "Server",            placeholder: "e.g. XMGlobal-MT5 6" },
+                { key: "tradingPassword",  label: "Trading Password",  placeholder: "Enter to update (required for balance sync)", type: "password" },
+                { key: "investorPassword", label: "Investor Password", placeholder: "Enter to update", type: "password" },
+                { key: "brokerName",       label: "Broker",            placeholder: "" },
+                { key: "accountType",      label: "Account Type",      placeholder: "" },
+                { key: "leverage",         label: "Leverage",          placeholder: "" },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="block text-xs text-muted-foreground mb-1">{f.label}</label>
+                  <input
+                    type={f.type ?? "text"}
+                    placeholder={f.placeholder || (editForm[f.key] ?? "")}
+                    value={editForm[f.key] ?? ""}
+                    onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    className="w-full bg-accent border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary"
+                  />
+                </div>
+              ))}
+            </div>
+            {!editForm.tradingPassword && (
+              <p className="text-[10px] text-amber-400 mt-3">
+                ⚠ No trading password entered. MetaApi cannot sync the balance without it.
+              </p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setEditAccount(null)}
+                className="flex-1 px-4 py-2 text-xs border border-border rounded-lg hover:bg-accent transition-colors">
+                Cancel
+              </button>
+              <button onClick={saveEdit} disabled={editSaving}
+                className="flex-1 px-4 py-2 text-xs bg-primary text-black font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+                {editSaving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Diagnose modal */}
       {diagAccount && (
