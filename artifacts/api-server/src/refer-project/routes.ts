@@ -285,6 +285,62 @@ router.get("/refer-project/accounts/:id/mt5-history", async (req, res) => {
   } catch (err) { req.log.error(err); res.status(500).json({ error: "Failed to fetch MT5 history", details: String(err) }); }
 });
 
+/* ─── MetaApi diagnostic — quick provisioning status for an account ─────── */
+router.get("/refer-project/accounts/:id/metaapi-status", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return void res.status(400).json({ error: "Invalid account id" });
+
+    const [account] = await db.select().from(rpAccountsTable).where(eq(rpAccountsTable.id, id)).limit(1);
+    if (!account) return void res.status(404).json({ error: "Account not found" });
+
+    const token = process.env.METAAPI_TOKEN;
+    if (!token) return void res.status(503).json({ error: "METAAPI_TOKEN not configured", metaApiAccountId: null });
+
+    if (!account.metaApiAccountId) {
+      return void res.json({
+        metaApiAccountId: null,
+        state: null, connectionStatus: null, region: null,
+        message: "Not yet provisioned — click Verify to register this account with MetaApi.",
+      });
+    }
+
+    // Fetch live state from MetaApi provisioning API
+    const headers = { "auth-token": token, "Content-Type": "application/json" };
+    const provUrl = `https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${account.metaApiAccountId}`;
+    try {
+      const provRes = await fetch(provUrl, { headers });
+      if (!provRes.ok) {
+        const text = await provRes.text().catch(() => "");
+        return void res.json({
+          metaApiAccountId: account.metaApiAccountId,
+          state: null, connectionStatus: null, region: null,
+          error: `Provisioning API returned ${provRes.status}`,
+          message: text,
+        });
+      }
+      const acc = await provRes.json() as {
+        id?: string; state?: string; connectionStatus?: string;
+        region?: string; server?: string; version?: number;
+      };
+      return void res.json({
+        metaApiAccountId: account.metaApiAccountId,
+        state:            acc.state,
+        connectionStatus: acc.connectionStatus,
+        region:           acc.region,
+        server:           acc.server,
+        version:          acc.version,
+        clientApiUrl:     `https://mt-client-api-v1.${acc.region ?? "london"}.agiliumtrade.agiliumtrade.ai`,
+        message: acc.connectionStatus === "CONNECTED"
+          ? `✅ MetaApi connected (region: ${acc.region ?? "unknown"})`
+          : `⏳ MetaApi state=${acc.state} connectionStatus=${acc.connectionStatus} — may still be deploying`,
+      });
+    } catch (fetchErr) {
+      return void res.status(502).json({ error: "Could not reach MetaApi provisioning API", details: String(fetchErr) });
+    }
+  } catch (err) { req.log.error(err); res.status(500).json({ error: "MetaApi status check failed", details: String(err) }); }
+});
+
 /* ─── Dashboard ─────────────────────────────────────────────────────────── */
 router.get("/refer-project/dashboard", async (req, res) => {
   try {

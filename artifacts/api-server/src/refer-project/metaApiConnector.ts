@@ -22,6 +22,8 @@ const PROVISIONING_URL = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtra
 const CLIENT_URL_TEMPLATE = "https://mt-client-api-v1.{region}.agiliumtrade.agiliumtrade.ai";
 const DEPLOY_TIMEOUT_MS = 90_000; // 90 seconds
 const DEPLOY_POLL_MS    = 5_000;
+// All MetaApi regions — tried in order when the default fails
+const KNOWN_REGIONS = ["london", "vint-hill", "new-york", "us-east", "singapore"] as const;
 
 /* ── MetaApi REST Connector ──────────────────────────────────────────────── */
 export class MetaApiRestConnector implements MT5Connector {
@@ -47,8 +49,9 @@ export class MetaApiRestConnector implements MT5Connector {
 
   async connect(): Promise<boolean> {
     try {
-      // Step 1: Provision (find/create MetaApi account; returns true if already CONNECTED)
+      // Step 1: Provision (find/create MetaApi account; sets this.region; returns true if already CONNECTED)
       const alreadyConnected = await this.provision();
+      console.log(`[MetaApiConnector] provision done — alreadyConnected=${alreadyConnected} region=${this.region} id=${this.metaApiAccountId}`);
 
       // Step 2: Ensure account is deployed (best-effort — ignore if already deployed)
       if (!alreadyConnected) {
@@ -64,26 +67,25 @@ export class MetaApiRestConnector implements MT5Connector {
       }
 
       // Step 3: Try client API immediately — if balance is fetchable, we're live
-      try {
-        await this.getAccountInfo();
-        console.log("[MetaApiConnector] Client API accessible — connected!");
+      // Try all known regions in case the default is wrong
+      const reachable = await this.tryClientApiAllRegions();
+      if (reachable) {
+        console.log(`[MetaApiConnector] Client API accessible (region=${this.region}) — connected!`);
         this.connected = true;
         return true;
-      } catch {
-        // Not ready yet — fall through to polling
       }
 
       // Step 4: Poll provisioning API for CONNECTED status (up to 2 minutes)
       const ok = await this.waitConnected(120_000);
       if (ok) {
-        // Double-check client API is actually accessible
-        try {
-          await this.getAccountInfo();
+        // Re-sync region from provisioning (may have changed during deploy)
+        await this.syncRegionFromProvisioning();
+        const reachableAfterWait = await this.tryClientApiAllRegions();
+        if (reachableAfterWait) {
           this.connected = true;
           return true;
-        } catch (clientErr) {
-          console.warn(`[MetaApiConnector] Provisioning says CONNECTED but client API failed: ${clientErr}`);
         }
+        console.warn(`[MetaApiConnector] Provisioning says CONNECTED but client API unreachable in any region (tried: ${KNOWN_REGIONS.join(", ")})`);
       }
 
       console.warn("[MetaApiConnector] Could not reach MetaApi client API within timeout");
@@ -91,9 +93,12 @@ export class MetaApiRestConnector implements MT5Connector {
       return false;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      // If stale account ID caused a 404, clear it so next start re-provisions
-      if (msg.includes("404") || msg.includes("not found")) {
-        console.warn("[MetaApiConnector] Stale MetaApi account ID — clearing for re-provision next restart");
+      // Only clear the stored MetaApi account ID when the provisioning API explicitly says
+      // the account ID doesn't exist (true 404 on /users/current/accounts/{id}).
+      // Do NOT clear on client-API failures — those are region/readiness issues.
+      const isProvisioningNotFound = msg.includes("provisioning GET /users/current/accounts/") && msg.includes("404");
+      if (isProvisioningNotFound) {
+        console.warn("[MetaApiConnector] MetaApi account ID no longer exists — clearing for re-provision next restart");
         await db.update(rpAccountsTable)
           .set({ metaApiAccountId: null, updatedAt: new Date() })
           .where(eq(rpAccountsTable.id, this.dbAccountId));
@@ -146,6 +151,57 @@ export class MetaApiRestConnector implements MT5Connector {
     }));
   }
 
+  /**
+   * Fetch the correct region from MetaApi provisioning API and update this.region.
+   * Call this before making client API requests so we use the right endpoint.
+   * Safe to call even if metaApiAccountId is null (no-op in that case).
+   */
+  async syncRegionFromProvisioning(): Promise<void> {
+    if (!this.metaApiAccountId) return;
+    try {
+      const acc = await this.provFetch<{ region?: string; state?: string; connectionStatus?: string }>(
+        `/users/current/accounts/${this.metaApiAccountId}`
+      );
+      if (acc.region) {
+        const prev = this.region;
+        this.region = acc.region;
+        if (prev !== acc.region) {
+          console.log(`[MetaApiConnector] Region updated: ${prev} → ${acc.region} (state=${acc.state} connectionStatus=${acc.connectionStatus})`);
+        }
+      }
+    } catch (err) {
+      console.warn(`[MetaApiConnector] syncRegion failed: ${err}`);
+    }
+  }
+
+  /**
+   * Try the client API with each known region, updating this.region to the first one that works.
+   * Returns true if any region responds successfully.
+   */
+  private async tryClientApiAllRegions(): Promise<boolean> {
+    // Try current region first (fast path)
+    try {
+      await this.getAccountInfo();
+      return true;
+    } catch { /* try other regions */ }
+
+    for (const region of KNOWN_REGIONS) {
+      if (region === this.region) continue; // already tried
+      this.region = region;
+      try {
+        await this.getAccountInfo();
+        console.log(`[MetaApiConnector] Client API reachable via region="${region}" — updating`);
+        // Persist the working region so future instances use it directly
+        await db.update(rpAccountsTable)
+          .set({ metaApiRegion: region, updatedAt: new Date() })
+          .where(eq(rpAccountsTable.id, this.dbAccountId))
+          .catch(() => { /* column may not exist in older schema — ignore */ });
+        return true;
+      } catch { /* try next */ }
+    }
+    return false;
+  }
+
   /** Fetch real closed deal history from MetaApi (last N days). Throws on network/auth error. */
   async getDealHistory(days = 30): Promise<Array<{
     id: string; symbol: string; type: string; entry: string;
@@ -153,6 +209,8 @@ export class MetaApiRestConnector implements MT5Connector {
     swap: number; time: string; orderId?: string;
   }>> {
     if (!this.metaApiAccountId) throw new Error("Account not provisioned on MetaApi — click Verify first.");
+    // Sync region from provisioning API so we hit the correct client endpoint
+    await this.syncRegionFromProvisioning();
     const end   = new Date();
     const start = new Date(end.getTime() - days * 86_400_000);
     const deals = await this.clientFetch<Array<{
@@ -184,6 +242,8 @@ export class MetaApiRestConnector implements MT5Connector {
     commission: number; swap: number; time: string;
   }>> {
     if (!this.metaApiAccountId) throw new Error("Account not provisioned on MetaApi — click Verify first.");
+    // Sync region from provisioning API so we hit the correct client endpoint
+    await this.syncRegionFromProvisioning();
     const positions = await this.clientFetch<Array<{
       id: string | number; symbol: string; type: string; volume: number;
       openPrice: number; currentPrice?: number; profit?: number;
