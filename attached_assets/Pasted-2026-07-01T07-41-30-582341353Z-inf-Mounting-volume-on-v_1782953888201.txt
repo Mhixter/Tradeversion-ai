@@ -1,0 +1,63 @@
+2026-07-01T07:41:30.582341353Z [inf]  Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/db5a7e98-db8a-4f62-9da6-3bd7bd7c8542/vol_d3k6m8dahvl5xde1
+2026-07-01T07:41:30.582387973Z [inf]  Starting Container
+2026-07-01T07:41:30.670378309Z [inf]  
+2026-07-01T07:41:30.670382749Z [inf]  > @workspace/tradevision@0.0.0 dev /app/artifacts/tradevision
+2026-07-01T07:41:30.670387959Z [inf]  > BASE_PATH=/ API_PORT=8081 vite --config vite.config.ts --host 0.0.0.0
+2026-07-01T07:41:30.670392138Z [inf]  
+2026-07-01T07:41:30.946812159Z [inf]  
+2026-07-01T07:41:30.946816509Z [inf]    VITE v7.3.3  ready in 287 ms
+2026-07-01T07:41:30.946819779Z [inf]  
+2026-07-01T07:41:30.946823679Z [inf]    ➜  Local:   http://localhost:8080/
+2026-07-01T07:41:30.946827179Z [inf]    ➜  Network: http://10.139.220.199:8080/
+2026-07-01T07:43:21.068281260Z [err]  7:43:14 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-01T07:43:21.068286420Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-01T07:43:21.068290459Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-01T07:43:21.068293839Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-01T07:43:21.068297539Z [err]  7:43:20 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-01T07:43:21.068301419Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-01T07:43:21.068304729Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-01T07:43:21.068308629Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-01T07:43:24.250144731Z [err]  7:43:24 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-01T07:43:24.250152741Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-01T07:43:24.250157151Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-01T07:43:24.250160511Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-01T07:43:24.387645013Z [err]  7:43:24 AM [vite] http proxy error: /api/auth/user
+2026-07-01T07:43:24.387650023Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-01T07:43:24.387653283Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-01T07:43:24.387655673Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-01T07:44:14.469077474Z [err]  7:44:13 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-01T07:44:14.469080594Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-01T07:44:14.469083884Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-01T07:44:14.469087614Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-01T07:44:15.488485431Z [err]  7:44:15 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-01T07:44:15.488488191Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-01T07:44:15.488491271Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-01T07:44:15.488495111Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-01T07:50:46.515624465Z [err]  7:50:38 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-01T07:50:46.515630335Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-01T07:50:46.515634585Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-01T07:50:46.515637975Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-02T00:32:04.212300198Z [err]  12:32:00 AM [vite] http proxy error: /api/auth/user
+2026-07-02T00:32:04.212303148Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-02T00:32:04.212305668Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-02T00:32:04.212309078Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-02T00:32:05.084843932Z [err]  12:32:05 AM [vite] http proxy error: /api/auth/user
+2026-07-02T00:32:05.084848602Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-02T00:32:05.084851532Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-02T00:32:05.084854682Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-02T00:32:25.011831483Z [err]  12:32:15 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-02T00:32:25.011839913Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-02T00:32:25.011844533Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-02T00:32:25.011848292Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-02T00:33:05.011834536Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-02T00:33:05.011938315Z [err]  12:33:02 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-02T00:33:05.011942575Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-02T00:33:05.011946785Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-02T00:33:06.937371644Z [err]  12:33:06 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-02T00:33:06.937376434Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-02T00:33:06.937379584Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-02T00:33:06.937382844Z [err]      at afterConnectMultiple (node:net:1716:7)
+2026-07-02T00:34:37.123303122Z [err]  12:34:35 AM [vite] http proxy error: /api/company-admin/auth
+2026-07-02T00:34:37.123309262Z [err]  AggregateError [ECONNREFUSED]: 
+2026-07-02T00:34:37.123313802Z [err]      at internalConnectMultiple (node:net:1135:18)
+2026-07-02T00:34:37.123317582Z [err]      at afterConnectMultiple (node:net:1716:7)

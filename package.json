@@ -1,5 +1,8 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
+  "scripts": {
+    "railway:start": "node --enable-source-maps ./artifacts/api-server/dist/index.mjs"
+  },
   "build": {
     "builder": "DOCKERFILE",
     "watchPatterns": [
