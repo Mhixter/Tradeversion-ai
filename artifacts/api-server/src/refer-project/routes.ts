@@ -420,26 +420,29 @@ router.post("/refer-project/accounts/:id/force-redeploy", async (req, res) => {
 
     steps.push(`Current state: ${provAcc.state} / ${provAcc.connectionStatus} (server: "${provAcc.server}")`);
 
-    // Step 2: patch server name if different from DB
+    // Step 2: patch server name if MetaApi server is missing OR different from DB
     const dbServer = account.server;
-    if (provAcc.server && provAcc.server !== dbServer) {
-      steps.push(`Server mismatch detected: MetaApi="${provAcc.server}" DB="${dbServer}" — patching MetaApi`);
+    const metaServer = provAcc.server ?? "";
+    let patchOk = true;
+    if (!metaServer || metaServer !== dbServer) {
+      const label = !metaServer
+        ? `MetaApi has no server stored — setting to "${dbServer}"`
+        : `Server mismatch: MetaApi="${metaServer}" DB="${dbServer}" — patching`;
+      steps.push(label);
       const patchRes = await fetch(accUrl, {
         method: "PUT",
         headers,
-        body: JSON.stringify({
-          ...provAcc,
-          server: dbServer,
-        }),
+        body: JSON.stringify({ ...provAcc, server: dbServer }),
       });
       if (patchRes.ok || patchRes.status === 204) {
         steps.push(`✅ Server patched to "${dbServer}"`);
       } else {
         const pt = await patchRes.text().catch(() => "");
-        steps.push(`⚠️ Patch failed (${patchRes.status}): ${pt.slice(0, 200)} — continuing anyway`);
+        steps.push(`⚠️ Patch failed (${patchRes.status}): ${pt.slice(0, 200)} — continuing with redeploy`);
+        patchOk = false;
       }
     } else {
-      steps.push(`Server names match ("${dbServer}") — no patch needed`);
+      steps.push(`Server matches ("${dbServer}") — no patch needed`);
     }
 
     // Step 3: undeploy
@@ -456,20 +459,23 @@ router.post("/refer-project/accounts/:id/force-redeploy", async (req, res) => {
 
     // Step 5: redeploy
     const deployRes = await fetch(`${accUrl}/deploy`, { method: "POST", headers });
+    let deployOk = false;
     if (deployRes.ok || deployRes.status === 204) {
+      deployOk = true;
       steps.push("✅ Deploy requested — MetaApi will now reconnect to broker");
     } else {
       const dt = await deployRes.text().catch(() => "");
-      steps.push(`Deploy returned ${deployRes.status}: ${dt.slice(0, 100)}`);
+      steps.push(`❌ Deploy failed (${deployRes.status}): ${dt.slice(0, 200)}`);
     }
 
+    const overallSuccess = deployOk;
     await rpLog({
-      event: "CONNECTION", accountId: id, level: "info",
-      message: `Force redeploy triggered`,
-      details: { steps, dbServer, metaApiServer: provAcc.server },
+      event: "CONNECTION", accountId: id, level: overallSuccess ? "info" : "error",
+      message: `Force redeploy ${overallSuccess ? "triggered" : "failed"}`,
+      details: { steps, dbServer, metaApiServer: metaServer, patchOk, deployOk },
     });
 
-    res.json({ success: true, steps });
+    res.json({ success: overallSuccess, steps });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Force redeploy failed", details: String(err) });

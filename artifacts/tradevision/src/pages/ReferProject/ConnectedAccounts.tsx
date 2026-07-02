@@ -172,14 +172,20 @@ export default function ConnectedAccounts() {
     try {
       const r = await rpPost(`/api/refer-project/accounts/${diagAccount.id}/force-redeploy`);
       const data = await r.json() as { success?: boolean; steps?: string[]; error?: string; details?: string };
+      if (!r.ok) {
+        setRedeploySteps([`❌ Server error (${r.status}): ${data.error ?? "Unknown error"}${data.details ? ` — ${data.details}` : ""}`]);
+        return;
+      }
       if (data.steps) setRedeploySteps(data.steps);
-      // Refresh status after redeploy
-      setTimeout(async () => {
-        const r2 = await rpGet(`/api/refer-project/accounts/${diagAccount.id}/metaapi-status`);
-        if (r2.ok) setDiagStatus(await r2.json());
-      }, 4000);
+      // If deploy was triggered, refresh status after a few seconds
+      if (data.success) {
+        setTimeout(async () => {
+          const r2 = await rpGet(`/api/refer-project/accounts/${diagAccount.id}/metaapi-status`);
+          if (r2.ok) setDiagStatus(await r2.json());
+        }, 5000);
+      }
     } catch {
-      setRedeploySteps(["Network error — could not reach Railway"]);
+      setRedeploySteps(["❌ Network error — could not reach Railway server"]);
     } finally {
       setRedeploying(false);
     }
