@@ -274,17 +274,24 @@ router.post("/refer-project/accounts/:id/sync-balance", async (req, res) => {
       info = await connector.getAccountInfo();
     } catch (balErr: unknown) {
       const msg = String(balErr);
-      const hint =
-        msg.includes("404")
-          ? "MetaApi account ID not found — click Verify, then Sync Balance again"
-          : msg.includes("401") || msg.includes("403")
-          ? "METAAPI_TOKEN rejected — check it hasn't expired in Railway env vars"
-          : "MetaApi broker connection not yet established — this can take 2–5 min after first deploy. Start the worker and wait, or try again in a minute.";
-      // Try deploying the account so MetaApi starts connecting to broker in background
-      try {
-        await connector.connect(); // deploy best-effort; ignore result
-      } catch { /* ignore */ }
-      return void res.status(502).json({ error: "Broker not yet connected on MetaApi", details: msg, hint });
+      // On non-auth/non-404 errors: the account may have just needed deploying or a region update.
+      // Call connect() to trigger deploy + region sync, then retry getAccountInfo() once.
+      if (!msg.includes("401") && !msg.includes("403") && !msg.includes("404")) {
+        try {
+          await connector.connect();
+          info = await connector.getAccountInfo();
+          // Retry succeeded — fall through to persist + return below
+        } catch { /* retry also failed — fall through to 502 */ }
+      }
+      if (!info!) {
+        const hint =
+          msg.includes("404")
+            ? "MetaApi account ID not found — click Verify, then Sync Balance again"
+            : msg.includes("401") || msg.includes("403")
+            ? "METAAPI_TOKEN rejected — check it hasn't expired in Railway env vars"
+            : "MetaApi broker connection not yet established — this can take 2–5 min after first deploy. Start the worker and wait, or try again in a minute.";
+        return void res.status(502).json({ error: "Broker not yet connected on MetaApi", details: msg, hint });
+      }
     }
 
     // Persist real balance to DB
