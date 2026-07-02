@@ -265,6 +265,8 @@ export interface MetaApiVerifyResult {
   tokenValid:       boolean;
   /** Account was found on MetaApi (provisioned). Only true when both token and account exist. */
   accountFound:     boolean;
+  /** MetaApi domain is unreachable (network egress blocked by hosting platform). */
+  networkBlocked:   boolean;
   metaApiAccountId?: string;
   state?:            string;
   connectionStatus?: string;
@@ -290,6 +292,7 @@ export async function verifyMetaApiAccount(
       return {
         tokenValid:       true,
         accountFound:     true,
+        networkBlocked:   false,
         metaApiAccountId: found.id,
         state:            found.state,
         connectionStatus: found.connectionStatus,
@@ -298,11 +301,21 @@ export async function verifyMetaApiAccount(
     }
     // Token works but account not yet provisioned — distinct from "verified"
     return {
-      tokenValid:   true,
-      accountFound: false,
+      tokenValid:     true,
+      accountFound:   false,
+      networkBlocked: false,
       message: "MetaApi token valid. Account not yet provisioned — it will be created on first Start.",
     };
-  } catch (err) {
-    return { tokenValid: false, accountFound: false, message: `MetaApi unreachable: ${String(err)}` };
+  } catch (err: unknown) {
+    const msg    = String(err);
+    const isEgress = msg.includes("ENOTFOUND") || msg.includes("fetch failed") || msg.includes("ECONNREFUSED") || msg.includes("network");
+    return {
+      tokenValid:     false,
+      accountFound:   false,
+      networkBlocked: isEgress,
+      message: isEgress
+        ? "MetaApi domain is unreachable from this hosting environment (egress blocked). Your token and credentials are correct — live data requires a hosting provider with unrestricted outbound network access."
+        : `MetaApi error: ${msg}`,
+    };
   }
 }

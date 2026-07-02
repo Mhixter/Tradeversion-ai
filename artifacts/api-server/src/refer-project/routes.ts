@@ -177,11 +177,13 @@ router.post("/refer-project/accounts/:id/test-connection", async (req, res) => {
       const result = await verifyMetaApiAccount(metaToken, account.mt5Login, account.server);
       const latencyMs = Date.now() - t0;
 
-      // "verified" only when the account is actually provisioned on MetaApi.
-      // "token_valid" when the token works but the account hasn't been provisioned yet.
-      // "failed" when the token itself is rejected or MetaApi is unreachable.
-      const newStatus = result.accountFound ? "verified"
-        : result.tokenValid ? "unverified"   // token OK but not provisioned yet
+      // "verified"        — account found and provisioned on MetaApi
+      // "unverified"      — token OK but account not yet provisioned
+      // "network_blocked" — MetaApi domain unreachable from this host (egress filter)
+      // "failed"          — token rejected by MetaApi
+      const newStatus = result.accountFound   ? "verified"
+        : result.tokenValid                   ? "unverified"
+        : result.networkBlocked               ? "network_blocked"
         : "failed";
 
       await db.update(rpAccountsTable)

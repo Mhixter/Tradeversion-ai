@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
+import { Plus, Play, Square, Wifi, Trash2, RefreshCw, X, ShieldCheck, ShieldAlert, WifiOff, Loader2 } from "lucide-react";
 import { rpGet, rpPost, rpDelete } from "./rpApi";
 
 interface Account {
@@ -25,8 +25,8 @@ const statusDot = (s: string) =>
   s === "connecting" ? "bg-amber-400 animate-pulse"   :
   s === "error"      ? "bg-red-400"                   : "bg-muted-foreground";
 
-const verifyBadge = (status: string, testing: boolean) => {
-  if (testing) return (
+const verifyBadge = (status: string, testing: boolean, message?: string) => {
+  if (testing || status === "verifying") return (
     <span className="flex items-center gap-1 text-[10px] text-amber-400">
       <Loader2 className="w-3 h-3 animate-spin" /> Verifying…
     </span>
@@ -36,14 +36,14 @@ const verifyBadge = (status: string, testing: boolean) => {
       <ShieldCheck className="w-3 h-3" /> Live
     </span>
   );
-  if (status === "failed") return (
-    <span className="flex items-center gap-1 text-[10px] text-red-400">
-      <ShieldAlert className="w-3 h-3" /> Failed
+  if (status === "network_blocked") return (
+    <span className="flex items-center gap-1 text-[10px] text-amber-400" title={message ?? "MetaApi egress blocked by hosting provider"}>
+      <WifiOff className="w-3 h-3" /> Egress blocked
     </span>
   );
-  if (status === "verifying") return (
-    <span className="flex items-center gap-1 text-[10px] text-amber-400">
-      <Loader2 className="w-3 h-3 animate-spin" /> Verifying…
+  if (status === "failed") return (
+    <span className="flex items-center gap-1 text-[10px] text-red-400" title={message ?? "Token rejected by MetaApi"}>
+      <ShieldAlert className="w-3 h-3" /> Bad token
     </span>
   );
   return <span className="text-[10px] text-muted-foreground">Unverified</span>;
@@ -157,7 +157,7 @@ export default function ConnectedAccounts() {
                   {/* MetaApi verification column */}
                   <td className="px-4 py-3">
                     <div className="space-y-0.5">
-                      {verifyBadge(acc.verificationStatus, isTesting)}
+                      {verifyBadge(acc.verificationStatus, isTesting, tr?.message)}
                       {tr && !isTesting && (
                         <div className={`text-[10px] mt-0.5 ${tr.ok ? "text-emerald-400" : "text-red-400"}`}>
                           {tr.isLive
