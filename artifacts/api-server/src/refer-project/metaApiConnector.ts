@@ -49,8 +49,10 @@ export class MetaApiRestConnector implements MT5Connector {
     // Two attempts: if deploy returns 404 (stale cached ID), clear and re-provision once.
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        await this.provision();
-        await this.deployAccount();
+        const alreadyConnected = await this.provision();
+        if (!alreadyConnected) {
+          await this.deployAccount();
+        }
         const ok = await this.waitConnected();
         this.connected = ok;
         return ok;
@@ -195,24 +197,29 @@ export class MetaApiRestConnector implements MT5Connector {
   /**
    * Find an existing MetaApi account matching our MT5 login+server,
    * or create a new one. Saves the MetaApi account ID back to the DB.
+   * Returns true if the account is already CONNECTED (skip deploy step).
    */
-  private async provision(): Promise<void> {
+  private async provision(): Promise<boolean> {
     if (this.metaApiAccountId) {
-      // Already provisioned — just refresh region from the account record
+      // Already provisioned — just refresh region + check live state
       try {
-        const acc = await this.provFetch<{ id: string; region?: string; state?: string }>(
+        const acc = await this.provFetch<{ id: string; region?: string; state?: string; connectionStatus?: string }>(
           `/users/current/accounts/${this.metaApiAccountId}`
         );
         this.region = acc.region ?? "london";
+        console.log(`[MetaApiConnector] Existing account state=${acc.state} connectionStatus=${acc.connectionStatus}`);
+        // If already deployed+connected, skip the /deploy call
+        if (acc.connectionStatus === "CONNECTED") return true;
+        return false;
       } catch {
-        // If it errors, fall through to re-provision
+        // If it errors (e.g. deleted on MetaApi side), fall through to re-provision
         this.metaApiAccountId = null;
       }
     }
 
     if (!this.metaApiAccountId) {
       // Search existing MetaApi accounts by login only (server names may differ slightly)
-      const accounts = await this.provFetch<Array<{ id: string; login?: string; server?: string; region?: string }>>(
+      const accounts = await this.provFetch<Array<{ id: string; login?: string; server?: string; region?: string; connectionStatus?: string }>>(
         "/users/current/accounts?limit=100"
       );
       const existing = accounts.find(a => String(a.login) === String(this.mt5Login));
@@ -220,6 +227,7 @@ export class MetaApiRestConnector implements MT5Connector {
       if (existing) {
         this.metaApiAccountId = existing.id;
         this.region = existing.region ?? "london";
+        console.log(`[MetaApiConnector] Found existing account by login: id=${existing.id} connectionStatus=${existing.connectionStatus}`);
       } else {
         // Create a new MetaApi cloud account; if server name is unknown, retry with suggested names
         const payload = {
@@ -271,6 +279,8 @@ export class MetaApiRestConnector implements MT5Connector {
         .set({ metaApiAccountId: this.metaApiAccountId, updatedAt: new Date() })
         .where(eq(rpAccountsTable.id, this.dbAccountId));
     }
+
+    return false; // not yet confirmed connected — proceed with deploy
   }
 
   private async deployAccount(): Promise<void> {
