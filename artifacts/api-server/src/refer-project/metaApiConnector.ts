@@ -325,10 +325,10 @@ export async function verifyMetaApiAccount(
       return { tokenValid: false, accountFound: false, message: `MetaApi token invalid or quota exceeded (HTTP ${res.status})` };
     }
     const accounts: Array<{ id: string; login?: string; server?: string; state?: string; connectionStatus?: string }> = await res.json();
-    const found = accounts.find(
-      a => String(a.login) === String(mt5Login) && a.server === server
-    );
+    // Match by login only — server name in MetaApi may differ from what user typed
+    const found = accounts.find(a => String(a.login) === String(mt5Login));
     if (found) {
+      const isConnected = found.connectionStatus === "CONNECTED";
       return {
         tokenValid:       true,
         accountFound:     true,
@@ -336,7 +336,9 @@ export async function verifyMetaApiAccount(
         metaApiAccountId: found.id,
         state:            found.state,
         connectionStatus: found.connectionStatus,
-        message: `Account found on MetaApi — state: ${found.state ?? "unknown"}, connection: ${found.connectionStatus ?? "unknown"}`,
+        message: isConnected
+          ? `Account connected on MetaApi (server: ${found.server ?? "unknown"})`
+          : `Account found on MetaApi but not yet connected — state: ${found.state ?? "unknown"}, connection: ${found.connectionStatus ?? "unknown"}. MetaApi is trying to reach the broker. This usually takes 2–5 minutes on first deploy.`,
       };
     }
     // Token works but account not yet provisioned — distinct from "verified"
@@ -344,7 +346,7 @@ export async function verifyMetaApiAccount(
       tokenValid:     true,
       accountFound:   false,
       networkBlocked: false,
-      message: "MetaApi token valid. Account not yet provisioned — it will be created on first Start.",
+      message: "MetaApi token valid. No account found with this login. Add it via app.metaapi.cloud → MT Accounts, or Start the bot to auto-provision.",
     };
   } catch (err: unknown) {
     const msg    = String(err);
