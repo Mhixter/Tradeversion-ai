@@ -126,17 +126,14 @@ export class AccountWorker {
   private async tick(): Promise<void> {
     if (!this.running) return;
 
-    const [settings, aiConfig] = await Promise.all([this.getSettings(), this.getAIConfig()]);
-    if (!settings || !settings.enabled) return;
-
-    // Reconnect if needed
+    // Reconnect if needed (before anything else)
     if (!this.connector.isConnected()) {
       await rpLog({ event: "CONNECTION", accountId: this.accountId, message: "Reconnecting...", level: "warn" });
       const ok = await this.connector.connect();
       if (!ok) return;
     }
 
-    /* 1. Update account info in DB */
+    /* 1. Always update account balance/equity — regardless of whether trading is enabled */
     let currentBalance = -1; // -1 = unknown (error case)
     try {
       const info = await this.connector.getAccountInfo();
@@ -144,14 +141,23 @@ export class AccountWorker {
       await db.update(rpAccountsTable)
         .set({ balance: String(info.balance.toFixed(2)), equity: String(info.equity.toFixed(2)), lastSyncTime: new Date(), updatedAt: new Date() })
         .where(eq(rpAccountsTable.id, this.accountId));
-    } catch { /* continue on error */ }
+      await rpLog({ event: "CONNECTION", accountId: this.accountId, level: "info",
+        message: `Balance synced: ${info.balance.toFixed(2)} | Equity: ${info.equity.toFixed(2)}`,
+        details: { balance: info.balance, equity: info.equity, freeMargin: info.freeMargin } });
+    } catch (err) {
+      await rpLog({ event: "ERROR", accountId: this.accountId, level: "warn",
+        message: `getAccountInfo failed: ${String(err)}` });
+    }
+
+    const [settings, aiConfig] = await Promise.all([this.getSettings(), this.getAIConfig()]);
 
     /* 2. Process open positions: update P&L + close timers */
-    await this.processOpenPositions(settings);
+    if (settings) await this.processOpenPositions(settings);
 
-    /* 3. Open new positions if allowed.
+    /* 3. Open new positions only when trading is enabled.
           When using MetaApi (live data) and the real balance is $0,
           skip silently — no log spam. */
+    if (!settings || !settings.enabled) return;
     if (this.usingMetaApi && currentBalance === 0) return;
 
     if (this.withinTradingHours(settings)) {
