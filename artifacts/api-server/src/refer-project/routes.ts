@@ -228,25 +228,60 @@ router.post("/refer-project/accounts/:id/test-connection", async (req, res) => {
 router.get("/refer-project/accounts/:id/mt5-history", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const days = parseInt((req.query.days as string) ?? "30");
+    if (isNaN(id)) return void res.status(400).json({ error: "Invalid account id" });
+
+    const rawDays = parseInt((req.query.days as string) ?? "30");
+    const days = Number.isFinite(rawDays) && rawDays >= 1 && rawDays <= 365 ? rawDays : 30;
+
     const [account] = await db.select().from(rpAccountsTable).where(eq(rpAccountsTable.id, id)).limit(1);
     if (!account) return void res.status(404).json({ error: "Account not found" });
-    if (!account.metaApiAccountId) return void res.json({ deals: [], positions: [], message: "Account not yet provisioned on MetaApi — click Verify first." });
+    if (!account.metaApiAccountId) {
+      return void res.status(422).json({
+        error: "Account not yet provisioned on MetaApi",
+        message: "Click the Verify button on the Connected Accounts page first.",
+        deals: [], positions: [],
+      });
+    }
 
     const token = process.env.METAAPI_TOKEN;
-    if (!token) return void res.json({ deals: [], positions: [], message: "METAAPI_TOKEN not configured." });
+    if (!token) {
+      return void res.status(503).json({
+        error: "METAAPI_TOKEN not configured",
+        message: "Add METAAPI_TOKEN to the Railway environment variables.",
+        deals: [], positions: [],
+      });
+    }
 
     const connector = new MetaApiRestConnector(
       token, account.mt5Login, account.tradingPassword ?? "", account.server,
       account.accountName, id, account.metaApiAccountId
     );
 
-    const [deals, positions] = await Promise.all([
+    const [deals, positions] = await Promise.allSettled([
       connector.getDealHistory(days),
       connector.getRealOpenPositions(),
     ]);
 
-    res.json({ deals, positions, metaApiAccountId: account.metaApiAccountId });
+    const dealsData  = deals.status     === "fulfilled" ? deals.value     : [];
+    const posData    = positions.status === "fulfilled" ? positions.value : [];
+    const dealsErr   = deals.status     === "rejected"  ? String(deals.reason)     : null;
+    const posErr     = positions.status === "rejected"  ? String(positions.reason) : null;
+    const errorMsg   = [dealsErr, posErr].filter(Boolean).join("; ");
+
+    if (errorMsg && dealsData.length === 0 && posData.length === 0) {
+      // Full failure — tell the client clearly
+      return void res.status(502).json({
+        error: "MetaApi client API unreachable",
+        message: errorMsg,
+        deals: [], positions: [],
+      });
+    }
+
+    res.json({
+      deals: dealsData, positions: posData,
+      metaApiAccountId: account.metaApiAccountId,
+      ...(errorMsg ? { warning: errorMsg } : {}),
+    });
   } catch (err) { req.log.error(err); res.status(500).json({ error: "Failed to fetch MT5 history", details: String(err) }); }
 });
 

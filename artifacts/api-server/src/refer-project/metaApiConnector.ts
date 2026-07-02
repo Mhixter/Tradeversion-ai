@@ -146,71 +146,61 @@ export class MetaApiRestConnector implements MT5Connector {
     }));
   }
 
-  /** Fetch real closed deal history from MetaApi (last N days). */
+  /** Fetch real closed deal history from MetaApi (last N days). Throws on network/auth error. */
   async getDealHistory(days = 30): Promise<Array<{
     id: string; symbol: string; type: string; entry: string;
     volume: number; price: number; profit: number; commission: number;
     swap: number; time: string; orderId?: string;
   }>> {
-    if (!this.metaApiAccountId) return [];
+    if (!this.metaApiAccountId) throw new Error("Account not provisioned on MetaApi — click Verify first.");
     const end   = new Date();
     const start = new Date(end.getTime() - days * 86_400_000);
-    try {
-      const deals = await this.clientFetch<Array<{
-        id: string; symbol?: string; type: string; entry?: string;
-        volume?: number; price?: number; profit?: number; commission?: number;
-        swap?: number; time: string; orderId?: string;
-      }>>(`/users/current/accounts/${this.metaApiAccountId}/history-deals/time/${start.toISOString()}/${end.toISOString()}`);
-      return deals
-        .filter(d => d.symbol && d.type !== "DEAL_TYPE_BALANCE") // skip deposit/withdrawal entries
-        .map(d => ({
-          id:         String(d.id),
-          symbol:     d.symbol ?? "",
-          type:       d.type ?? "",
-          entry:      d.entry ?? "",
-          volume:     d.volume ?? 0,
-          price:      d.price ?? 0,
-          profit:     d.profit ?? 0,
-          commission: d.commission ?? 0,
-          swap:       d.swap ?? 0,
-          time:       d.time,
-          orderId:    d.orderId ? String(d.orderId) : undefined,
-        }));
-    } catch (err) {
-      console.warn(`[MetaApiConnector] getDealHistory failed: ${err}`);
-      return [];
-    }
+    const deals = await this.clientFetch<Array<{
+      id: string; symbol?: string; type: string; entry?: string;
+      volume?: number; price?: number; profit?: number; commission?: number;
+      swap?: number; time: string; orderId?: string;
+    }>>(`/users/current/accounts/${this.metaApiAccountId}/history-deals/time/${start.toISOString()}/${end.toISOString()}`);
+    return deals
+      .filter(d => d.symbol && d.type !== "DEAL_TYPE_BALANCE") // skip deposit/withdrawal entries
+      .map(d => ({
+        id:         String(d.id),
+        symbol:     d.symbol ?? "",
+        type:       d.type ?? "",
+        entry:      d.entry ?? "",
+        volume:     d.volume ?? 0,
+        price:      d.price ?? 0,
+        profit:     d.profit ?? 0,
+        commission: d.commission ?? 0,
+        swap:       d.swap ?? 0,
+        time:       d.time,
+        orderId:    d.orderId ? String(d.orderId) : undefined,
+      }));
   }
 
-  /** Fetch real open positions from MetaApi live account. */
+  /** Fetch real open positions from MetaApi live account. Throws on network/auth error. */
   async getRealOpenPositions(): Promise<Array<{
     id: string; symbol: string; type: string; volume: number;
     openPrice: number; currentPrice: number; profit: number;
     commission: number; swap: number; time: string;
   }>> {
-    if (!this.metaApiAccountId) return [];
-    try {
-      const positions = await this.clientFetch<Array<{
-        id: string | number; symbol: string; type: string; volume: number;
-        openPrice: number; currentPrice?: number; profit?: number;
-        commission?: number; swap?: number; time: string;
-      }>>(`/users/current/accounts/${this.metaApiAccountId}/positions`);
-      return positions.map(p => ({
-        id:           String(p.id),
-        symbol:       p.symbol,
-        type:         p.type,
-        volume:       p.volume,
-        openPrice:    p.openPrice,
-        currentPrice: p.currentPrice ?? p.openPrice,
-        profit:       p.profit ?? 0,
-        commission:   p.commission ?? 0,
-        swap:         p.swap ?? 0,
-        time:         p.time,
-      }));
-    } catch (err) {
-      console.warn(`[MetaApiConnector] getRealOpenPositions failed: ${err}`);
-      return [];
-    }
+    if (!this.metaApiAccountId) throw new Error("Account not provisioned on MetaApi — click Verify first.");
+    const positions = await this.clientFetch<Array<{
+      id: string | number; symbol: string; type: string; volume: number;
+      openPrice: number; currentPrice?: number; profit?: number;
+      commission?: number; swap?: number; time: string;
+    }>>(`/users/current/accounts/${this.metaApiAccountId}/positions`);
+    return positions.map(p => ({
+      id:           String(p.id),
+      symbol:       p.symbol,
+      type:         p.type,
+      volume:       p.volume,
+      openPrice:    p.openPrice,
+      currentPrice: p.currentPrice ?? p.openPrice,
+      profit:       p.profit ?? 0,
+      commission:   p.commission ?? 0,
+      swap:         p.swap ?? 0,
+      time:         p.time,
+    }));
   }
 
   /* ── Simulated price data ────────────────────────────────────────────── */
