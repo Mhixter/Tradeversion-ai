@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { useConnectBroker, useGetBrokers } from "@workspace/api-client-react";
+import { useConnectBroker, useGetBrokers, useDisconnectBroker } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Settings as SettingsIcon, User, Shield, Sliders, TrendingUp, Bell,
@@ -514,10 +515,27 @@ function AddConnectionModal({ onClose }: { onClose: () => void }) {
   const handleTest = async () => {
     setTesting(true);
     setTestResult("idle");
-    await new Promise(r => setTimeout(r, 1800));
-    setTesting(false);
-    setTestResult("ok");
-    toast({ title: "Connection test passed", description: `Successfully reached ${broker} ${platform} server.` });
+    try {
+      const res = await fetch("/api/brokers/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ broker, platform, server, login, password }),
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setTestResult("ok");
+        toast({ title: "Connection test passed", description: `${broker} ${platform} server reached (${json.latencyMs}ms).` });
+      } else {
+        setTestResult("fail");
+        toast({ title: "Connection test failed", description: json.error ?? "Could not reach server.", variant: "destructive" });
+      }
+    } catch {
+      setTestResult("fail");
+      toast({ title: "Connection test failed", description: "Network error — check your connection.", variant: "destructive" });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleConnect = async () => {
@@ -691,17 +709,41 @@ function AddConnectionModal({ onClose }: { onClose: () => void }) {
 function ConnectionsSection() {
   const [showModal, setShowModal] = useState(false);
   const { toast } = useToast();
-  const connections = [
-    { name: "MT5 IC Markets", type: "MT5 Broker", status: "Connected", account: "#12345678", equity: "$82,540", latency: "12ms" },
-    { name: "MT5 Exness", type: "MT5 Broker", status: "Connected", account: "#87654321", equity: "$65,430", latency: "9ms" },
-    { name: "MT4 Deriv", type: "MT4 Broker", status: "Connected", account: "#11223344", equity: "$34,680", latency: "18ms" },
-    { name: "Binance (Spot)", type: "Crypto Exchange", status: "Connected", account: "#44332211", equity: "$24,970", latency: "8ms" },
-    { name: "Interactive Brokers", type: "Stock Broker", status: "Connected", account: "#99887766", equity: "$8,301", latency: "22ms" },
-    { name: "Bybit", type: "Crypto Exchange", status: "Not Connected", account: "—", equity: "—", latency: "—" },
-  ];
+  const qc = useQueryClient();
+  const { data: brokers, isLoading } = useGetBrokers();
+  const disconnectBroker = useDisconnectBroker();
+
+  const handleDisconnect = async (id: number, name: string) => {
+    try {
+      await disconnectBroker.mutateAsync({ id });
+      qc.invalidateQueries({ queryKey: ["/api/brokers"] });
+      toast({ title: "Disconnected", description: `${name} has been disconnected.` });
+    } catch {
+      toast({ title: "Error", description: "Failed to disconnect broker.", variant: "destructive" });
+    }
+  };
+
+  const handleSync = async (id: number, name: string) => {
+    try {
+      const res = await fetch(`/api/brokers/${id}/sync`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        qc.invalidateQueries({ queryKey: ["/api/brokers"] });
+        toast({ title: "Synced", description: `${name} account data refreshed.` });
+      } else {
+        const json = await res.json().catch(() => ({}));
+        toast({ title: "Sync failed", description: (json as any).error ?? `Server returned ${res.status}.`, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Sync failed", description: "Network error — could not refresh account data.", variant: "destructive" });
+    }
+  };
+
   return (
     <>
-      {showModal && <AddConnectionModal onClose={() => setShowModal(false)} />}
+      {showModal && <AddConnectionModal onClose={() => { setShowModal(false); qc.invalidateQueries({ queryKey: ["/api/brokers"] }); }} />}
       <div className="space-y-5">
         {/* MT5/MT4 guide */}
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
@@ -723,40 +765,69 @@ function ConnectionsSection() {
           <CardHeader className="py-4 border-b border-border/50 flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm">Broker & Exchange Connections</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">{connections.filter(c => c.status === "Connected").length} connected · {connections.filter(c => c.status !== "Connected").length} available</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isLoading ? "Loading…" : `${brokers?.length ?? 0} connected`}
+              </p>
             </div>
             <Button size="sm" className="bg-primary hover:bg-primary/90 h-8" onClick={() => setShowModal(true)} data-testid="button-add-connection">
               <Plus className="w-3.5 h-3.5 mr-1.5" />Add Connection
             </Button>
           </CardHeader>
           <CardContent className="p-0">
-            {connections.map((c, i) => (
-              <div key={i} className="flex items-center justify-between gap-4 p-4 border-b border-border/40 last:border-0">
+            {isLoading && (
+              <div className="p-4 space-y-3">
+                {[1, 2].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+              </div>
+            )}
+
+            {!isLoading && (!brokers || brokers.length === 0) && (
+              <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+                <WifiOff className="w-8 h-8 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">No broker connected</p>
+                  <p className="text-xs text-muted-foreground mt-1">Add your first MT4 / MT5 account to unlock live trading and analytics.</p>
+                </div>
+                <Button size="sm" className="bg-primary hover:bg-primary/90 mt-1" onClick={() => setShowModal(true)}>
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />Add Connection
+                </Button>
+              </div>
+            )}
+
+            {brokers?.map((b, i) => (
+              <div key={b.id} className="flex items-center justify-between gap-4 p-4 border-b border-border/40 last:border-0">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${c.status === "Connected" ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${b.isConnected ? "bg-success animate-pulse" : "bg-muted-foreground"}`} />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">{c.name}</p>
-                    <p className="text-xs text-muted-foreground">{c.type} · {c.account}{c.latency !== "—" && <span className="ml-1 text-success">· {c.latency}</span>}</p>
+                    <p className="text-sm font-medium">{b.broker} <span className="text-muted-foreground font-normal">{b.platform}</span></p>
+                    <p className="text-xs text-muted-foreground">
+                      #{b.accountNumber} · {b.server}
+                      <span className={`ml-1.5 font-medium ${(b.profit ?? 0) >= 0 ? "text-success" : "text-destructive"}`}>
+                        {(b.profit ?? 0) >= 0 ? "+" : ""}${(b.profit ?? 0).toLocaleString("en-US", { maximumFractionDigits: 2 })}
+                      </span>
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {c.equity !== "—" && <span className="text-sm font-semibold hidden sm:block">{c.equity}</span>}
-                  {c.status === "Connected" ? (
-                    <div className="flex gap-1.5">
-                      <Button variant="outline" size="sm" className="h-7 text-xs" data-testid={`button-manage-conn-${i}`}>Manage</Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs text-destructive border-destructive/50 hover:bg-destructive hover:text-white"
-                        onClick={() => toast({ title: "Disconnected", description: `${c.name} has been disconnected.` })}
-                        data-testid={`button-disconnect-${i}`}
-                      >Disconnect</Button>
-                    </div>
-                  ) : (
-                    <Button size="sm" className="h-7 text-xs bg-primary hover:bg-primary/90" onClick={() => setShowModal(true)} data-testid={`button-connect-${i}`}>
-                      <Wifi className="w-3 h-3 mr-1" />Connect
-                    </Button>
-                  )}
+                  <span className="text-sm font-semibold hidden sm:block">
+                    ${(b.equity ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                  </span>
+                  <div className="flex gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => handleSync(b.id, b.broker)}
+                      data-testid={`button-sync-${i}`}
+                    >Sync</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs text-destructive border-destructive/50 hover:bg-destructive hover:text-white"
+                      onClick={() => handleDisconnect(b.id, `${b.broker} ${b.platform}`)}
+                      disabled={disconnectBroker.isPending}
+                      data-testid={`button-disconnect-${i}`}
+                    >Disconnect</Button>
+                  </div>
                 </div>
               </div>
             ))}

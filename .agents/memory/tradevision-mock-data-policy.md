@@ -35,9 +35,15 @@ description: Which routes are real DB, which are static platform content, and wh
 - Saves trade to `tradesTable`, updates bot PnL, updates broker equity/profit in DB
 - Trade size = 1% of equity in lots (min 0.01)
 
-## New endpoint
+## Broker connection endpoints (all real DB-backed)
+- `POST /api/brokers/test-connection` — validates credentials format + simulates latency; returns `{ success, latencyMs }` (must be declared BEFORE `/:id` routes)
+- `POST /api/brokers` — inserts to DB then calls `brokerService.connectAccount()` to seed realistic paper-trading equity/balance, persists back to DB
+- `POST /api/brokers/:id/sync` — re-syncs equity/balance from brokerService (or MetaApi if token set); re-initialises if account not in memory (e.g. after server restart)
+- `DELETE /api/brokers/:id` — removes from DB and calls `brokerService.disconnectAccount()` to clean up in-memory state
 - `PATCH /api/brokers/:id` — update broker equity/balance/status after connecting
 
 ## Frontend
 - `Portfolio.tsx` — replaced fake EURUSD candlestick chart with real AreaChart from `useGetPortfolioEquityCurve()`; shows "connect a broker" message when no data
 - `CopyTrading.tsx` — trader list from API (static content), following returns [] from API
+- `Settings.tsx ConnectionsSection` — replaced hardcoded connections list with real `useGetBrokers()` + `useDisconnectBroker()` hooks; shows empty state + Sync button per broker
+- `Settings.tsx AddConnectionModal handleTest` — wired to real `/api/brokers/test-connection` endpoint instead of fake setTimeout
