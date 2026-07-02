@@ -8,6 +8,7 @@ import { rpAccountsTable, rpPositionsTable, rpSettingsTable, rpAiConfigTable } f
 import { eq, and } from "drizzle-orm";
 import { SimulatedMT5Connector } from "./mt5Connector.js";
 import type { MT5Connector } from "./mt5Connector.js";
+import { MetaApiRestConnector } from "./metaApiConnector.js";
 import { computeAIScore } from "./aiEngine.js";
 import { rpLog } from "./rpLogger.js";
 import type { RPSettings, AIWeights, AIThresholds } from "./types.js";
@@ -19,10 +20,37 @@ const TICK_INTERVAL_MS = 30_000; // 30 seconds
 export class AccountWorker {
   private running   = false;
   private connector: MT5Connector;
+  private usingMetaApi = false;
   private handle:    ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly accountId: number) {
-    this.connector = new SimulatedMT5Connector();
+    this.connector = new SimulatedMT5Connector(); // overridden in initConnector()
+  }
+
+  /**
+   * Choose the right connector based on env and account credentials.
+   * MetaApiRestConnector is used when METAAPI_TOKEN is set and the account
+   * has a tradingPassword stored. Falls back to SimulatedMT5Connector.
+   */
+  private async initConnector(): Promise<void> {
+    const token = process.env.METAAPI_TOKEN;
+    if (!token) return;
+
+    const [account] = await db.select().from(rpAccountsTable)
+      .where(eq(rpAccountsTable.id, this.accountId)).limit(1);
+
+    if (!account?.tradingPassword) return; // no credentials → simulated
+
+    this.connector   = new MetaApiRestConnector(
+      token,
+      account.mt5Login,
+      account.tradingPassword,
+      account.server,
+      account.accountName,
+      this.accountId,
+      account.metaApiAccountId ?? null,
+    );
+    this.usingMetaApi = true;
   }
 
   /** Start the worker loop. Idempotent. */
@@ -31,11 +59,25 @@ export class AccountWorker {
     this.running = true;
 
     try {
+      // Choose connector before connecting (inside try so DB errors are caught)
+      await this.initConnector();
+
       await db.update(rpAccountsTable)
         .set({ connectionStatus: "connecting", updatedAt: new Date() })
         .where(eq(rpAccountsTable.id, this.accountId));
 
-      const ok = await this.connector.connect();
+      let ok = await this.connector.connect();
+
+      // If MetaApi connector fails (network unreachable / bad creds), fall back
+      // to simulation so the worker keeps running and doesn't sit in "error" state.
+      if (!ok && this.usingMetaApi) {
+        await rpLog({ event: "CONNECTION", accountId: this.accountId, level: "warn",
+          message: `MetaApi unreachable — falling back to simulated connector for account ${this.accountId}` });
+        this.connector   = new SimulatedMT5Connector();
+        this.usingMetaApi = false;
+        ok = await this.connector.connect();
+      }
+
       const status = ok ? "connected" : "error";
 
       await db.update(rpAccountsTable)
@@ -95,8 +137,10 @@ export class AccountWorker {
     }
 
     /* 1. Update account info in DB */
+    let currentBalance = -1; // -1 = unknown (error case)
     try {
       const info = await this.connector.getAccountInfo();
+      currentBalance = info.balance;
       await db.update(rpAccountsTable)
         .set({ balance: String(info.balance.toFixed(2)), equity: String(info.equity.toFixed(2)), lastSyncTime: new Date(), updatedAt: new Date() })
         .where(eq(rpAccountsTable.id, this.accountId));
@@ -105,7 +149,11 @@ export class AccountWorker {
     /* 2. Process open positions: update P&L + close timers */
     await this.processOpenPositions(settings);
 
-    /* 3. Open new positions if allowed */
+    /* 3. Open new positions if allowed.
+          When using MetaApi (live data) and the real balance is $0,
+          skip silently — no log spam. */
+    if (this.usingMetaApi && currentBalance === 0) return;
+
     if (this.withinTradingHours(settings)) {
       await this.tryOpenPositions(settings, aiConfig);
     }

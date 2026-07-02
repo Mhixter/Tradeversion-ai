@@ -13,6 +13,7 @@ import { eq, and, desc, gte, sql } from "drizzle-orm";
 import { workerManager } from "./workerManager.js";
 import { rpLog } from "./rpLogger.js";
 import { DEFAULT_SYMBOLS } from "./types.js";
+import { verifyMetaApiAccount } from "./metaApiConnector.js";
 
 /* ─── Admin auth ─────────────────────────────────────────────────────────── */
 const RP_ADMIN_EMAIL = "saidumuhammed664@gmail.com";
@@ -122,7 +123,7 @@ router.put("/refer-project/accounts/:id", async (req, res) => {
       .where(eq(rpAccountsTable.id, id))
       .returning();
     if (!updated) return void res.status(404).json({ error: "Account not found" });
-    res.json(updated);
+    res.json(sanitizeAccount(updated as unknown as Record<string, unknown>));
   } catch (err) { req.log.error(err); res.status(500).json({ error: "Failed to update account" }); }
 });
 
@@ -163,11 +164,59 @@ router.post("/refer-project/accounts/:id/test-connection", async (req, res) => {
     const id = parseInt(req.params.id);
     const [account] = await db.select().from(rpAccountsTable).where(eq(rpAccountsTable.id, id)).limit(1);
     if (!account) return void res.status(404).json({ error: "Account not found" });
-    // Simulate connection test
-    const delay = 500 + Math.random() * 1000;
+
+    const metaToken = process.env.METAAPI_TOKEN;
+
+    if (metaToken) {
+      // Real MetaApi verification — fast (no deploy, just provisioning list lookup)
+      const t0 = Date.now();
+      await db.update(rpAccountsTable)
+        .set({ verificationStatus: "verifying", updatedAt: new Date() })
+        .where(eq(rpAccountsTable.id, id));
+
+      const result = await verifyMetaApiAccount(metaToken, account.mt5Login, account.server);
+      const latencyMs = Date.now() - t0;
+
+      // "verified" only when the account is actually provisioned on MetaApi.
+      // "token_valid" when the token works but the account hasn't been provisioned yet.
+      // "failed" when the token itself is rejected or MetaApi is unreachable.
+      const newStatus = result.accountFound ? "verified"
+        : result.tokenValid ? "unverified"   // token OK but not provisioned yet
+        : "failed";
+
+      await db.update(rpAccountsTable)
+        .set({
+          verificationStatus: newStatus,
+          metaApiAccountId:   result.metaApiAccountId ?? account.metaApiAccountId ?? null,
+          updatedAt: new Date(),
+        })
+        .where(eq(rpAccountsTable.id, id));
+
+      await rpLog({
+        event:     result.accountFound ? "CONNECTION" : (result.tokenValid ? "CONNECTION" : "ERROR"),
+        accountId: id,
+        level:     result.tokenValid ? "info" : "error",
+        message:   `MetaApi verify: ${result.message}`,
+        details:   { metaApiAccountId: result.metaApiAccountId, state: result.state, connectionStatus: result.connectionStatus },
+      });
+
+      return void res.json({
+        success:    result.accountFound,
+        tokenValid: result.tokenValid,
+        isLive:     true,
+        latencyMs,
+        message:    result.message,
+        metaApiAccountId: result.metaApiAccountId,
+        state:            result.state,
+        connectionStatus: result.connectionStatus,
+      });
+    }
+
+    // Fallback — simulated test (no METAAPI_TOKEN configured)
+    const delay = 500 + Math.random() * 800;
     await new Promise(r => setTimeout(r, delay));
-    const ok = Math.random() > 0.1; // 90% success in simulation
-    res.json({ success: ok, latencyMs: Math.round(delay), message: ok ? "Connection successful" : "Connection failed" });
+    const ok = Math.random() > 0.1;
+    res.json({ success: ok, isLive: false, latencyMs: Math.round(delay), message: ok ? "Simulated connection OK" : "Simulated connection failed" });
   } catch (err) { req.log.error(err); res.status(500).json({ error: "Test failed" }); }
 });
 

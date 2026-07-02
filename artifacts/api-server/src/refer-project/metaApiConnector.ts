@@ -1,0 +1,308 @@
+/**
+ * Refer Project — MetaApi REST Connector
+ *
+ * Uses MetaApi.cloud's REST API (no npm package) to:
+ *  - Provision/reuse a deployed MT5 account on MetaApi
+ *  - Fetch real balance, equity, and open positions
+ *  - Simulate price data (candles/ticks) — same simulator as SimulatedMT5Connector
+ *  - Simulate trade execution (no real orders placed)
+ *
+ * Swap `openPosition` / `closePosition` for real MetaApi order endpoints
+ * when live trade execution is required.
+ */
+import { db } from "@workspace/db";
+import { rpAccountsTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import type { MT5Connector, MT5AccountInfo, MT5Position, MT5TickData } from "./mt5Connector.js";
+import { simulator } from "./mt5Connector.js";
+import type { Candle } from "./types.js";
+import { PIP_SIZE } from "./types.js";
+
+const PROVISIONING_URL = "https://mt-provisioning-api-v1.agiliumtrade.ai";
+const CLIENT_URL_TEMPLATE = "https://mt-client-api-v1.{region}.agiliumtrade.ai";
+const DEPLOY_TIMEOUT_MS = 90_000; // 90 seconds
+const DEPLOY_POLL_MS    = 5_000;
+
+/* ── MetaApi REST Connector ──────────────────────────────────────────────── */
+export class MetaApiRestConnector implements MT5Connector {
+  private metaApiAccountId: string | null;
+  private region = "london";
+  private connected = false;
+  // Simulated positions for the "simulated execution" layer
+  private simPositions = new Map<string, { symbol: string; type: "BUY"|"SELL"; volume: number; openPrice: number; openTime: Date }>();
+
+  constructor(
+    private readonly token:          string,
+    private readonly mt5Login:       string,
+    private readonly tradingPassword: string,
+    private readonly server:         string,
+    private readonly accountName:    string,
+    private readonly dbAccountId:    number,
+    initialMetaApiAccountId: string | null,
+  ) {
+    this.metaApiAccountId = initialMetaApiAccountId;
+  }
+
+  /* ── Public interface ────────────────────────────────────────────────── */
+
+  async connect(): Promise<boolean> {
+    try {
+      // Step 1 — provision (find or create MetaApi account)
+      await this.provision();
+      // Step 2 — deploy
+      await this.deployAccount();
+      // Step 3 — wait until MetaApi reports CONNECTED
+      const ok = await this.waitConnected();
+      this.connected = ok;
+      return ok;
+    } catch (err: unknown) {
+      // Log concisely — full stack only in debug
+      const msg = err instanceof Error ? err.message : String(err);
+      const cause = (err as { cause?: { code?: string } })?.cause?.code;
+      console.warn(`[MetaApiConnector] connect failed (${cause ?? msg}) — falling back to simulation`);
+      this.connected = false;
+      return false;
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    this.connected = false;
+    if (this.metaApiAccountId) {
+      try {
+        await this.provFetch(`/users/current/accounts/${this.metaApiAccountId}/undeploy`, "POST");
+      } catch { /* best-effort */ }
+    }
+  }
+
+  isConnected(): boolean { return this.connected; }
+
+  async getAccountInfo(): Promise<MT5AccountInfo> {
+    const data = await this.clientFetch<{
+      balance: number; equity: number; margin: number; freeMargin?: number; marginFree?: number;
+    }>(`/users/current/accounts/${this.metaApiAccountId}/account-information`);
+    return {
+      balance:    data.balance,
+      equity:     data.equity,
+      margin:     data.margin,
+      freeMargin: data.freeMargin ?? data.marginFree ?? (data.equity - data.margin),
+    };
+  }
+
+  async getOpenPositions(): Promise<MT5Position[]> {
+    const data = await this.clientFetch<Array<{
+      id: string|number; symbol: string; type: string;
+      volume: number; openPrice: number; currentPrice: number;
+      profit: number; time: string;
+    }>>(`/users/current/accounts/${this.metaApiAccountId}/positions`);
+
+    return data.map(p => ({
+      ticket:       String(p.id),
+      symbol:       p.symbol,
+      type:         p.type === "POSITION_TYPE_BUY" ? "BUY" : "SELL",
+      volume:       p.volume,
+      openPrice:    p.openPrice,
+      currentPrice: p.currentPrice,
+      profit:       p.profit,
+      openTime:     new Date(p.time),
+    }));
+  }
+
+  /* ── Simulated price data ────────────────────────────────────────────── */
+
+  async getCandles(symbol: string, count = 200): Promise<Candle[]> {
+    return simulator.getHistory(symbol).slice(-count);
+  }
+
+  async getTick(symbol: string): Promise<MT5TickData> {
+    const bid    = simulator.getPrice(symbol);
+    const spread = simulator.getSpread(symbol);
+    return { symbol, bid, ask: bid + spread, spread, time: new Date() };
+  }
+
+  /* ── Simulated trade execution (no real orders) ──────────────────────── */
+
+  async openPosition(symbol: string, type: "BUY" | "SELL", volume: number): Promise<string> {
+    const tick   = await this.getTick(symbol);
+    const price  = type === "BUY" ? tick.ask : tick.bid;
+    const ticket = `META-SIM-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    this.simPositions.set(ticket, { symbol, type, volume, openPrice: price, openTime: new Date() });
+    return ticket;
+  }
+
+  async closePosition(ticket: string): Promise<boolean> {
+    this.simPositions.delete(ticket);
+    return true;
+  }
+
+  /* ── Private helpers ─────────────────────────────────────────────────── */
+
+  private provHeaders() {
+    return { "auth-token": this.token, "Content-Type": "application/json" };
+  }
+
+  private get clientBase(): string {
+    return CLIENT_URL_TEMPLATE.replace("{region}", this.region);
+  }
+
+  /** Generic fetch against the provisioning API. Returns undefined for 204 No Content. */
+  private async provFetch<T = unknown>(path: string, method = "GET", body?: unknown): Promise<T> {
+    const res = await fetch(`${PROVISIONING_URL}${path}`, {
+      method,
+      headers: this.provHeaders(),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`MetaApi provisioning ${method} ${path} → ${res.status}: ${text}`);
+    }
+    if (res.status === 204 || res.headers.get("content-length") === "0") {
+      return undefined as unknown as T;
+    }
+    return res.json() as Promise<T>;
+  }
+
+  /** Generic fetch against the client (RPC) API. Returns undefined for 204 No Content. */
+  private async clientFetch<T = unknown>(path: string, method = "GET", body?: unknown): Promise<T> {
+    const res = await fetch(`${this.clientBase}${path}`, {
+      method,
+      headers: this.provHeaders(),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`MetaApi client ${method} ${path} → ${res.status}: ${text}`);
+    }
+    if (res.status === 204 || res.headers.get("content-length") === "0") {
+      return undefined as unknown as T;
+    }
+    return res.json() as Promise<T>;
+  }
+
+  /**
+   * Find an existing MetaApi account matching our MT5 login+server,
+   * or create a new one. Saves the MetaApi account ID back to the DB.
+   */
+  private async provision(): Promise<void> {
+    if (this.metaApiAccountId) {
+      // Already provisioned — just refresh region from the account record
+      try {
+        const acc = await this.provFetch<{ id: string; region?: string; state?: string }>(
+          `/users/current/accounts/${this.metaApiAccountId}`
+        );
+        this.region = acc.region ?? "london";
+      } catch {
+        // If it errors, fall through to re-provision
+        this.metaApiAccountId = null;
+      }
+    }
+
+    if (!this.metaApiAccountId) {
+      // List existing accounts and look for a match
+      const accounts = await this.provFetch<Array<{ id: string; login?: string; server?: string; region?: string }>>(
+        "/users/current/accounts?limit=100"
+      );
+      const existing = accounts.find(
+        a => String(a.login) === String(this.mt5Login) && a.server === this.server
+      );
+
+      if (existing) {
+        this.metaApiAccountId = existing.id;
+        this.region = existing.region ?? "london";
+      } else {
+        // Create a new MetaApi cloud account
+        const created = await this.provFetch<{ id: string; region?: string }>(
+          "/users/current/accounts",
+          "POST",
+          {
+            name:     this.accountName,
+            type:     "cloud-g2",
+            login:    this.mt5Login,
+            password: this.tradingPassword,
+            server:   this.server,
+            platform: "mt5",
+          }
+        );
+        this.metaApiAccountId = created.id;
+        this.region = created.region ?? "london";
+      }
+
+      // Persist MetaApi account ID to DB for reuse
+      await db.update(rpAccountsTable)
+        .set({ metaApiAccountId: this.metaApiAccountId, updatedAt: new Date() })
+        .where(eq(rpAccountsTable.id, this.dbAccountId));
+    }
+  }
+
+  private async deployAccount(): Promise<void> {
+    // provFetch already handles 204 safely — just call it directly
+    await this.provFetch(`/users/current/accounts/${this.metaApiAccountId}/deploy`, "POST");
+  }
+
+  private async waitConnected(timeoutMs = DEPLOY_TIMEOUT_MS): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      try {
+        const acc = await this.provFetch<{ connectionStatus?: string; state?: string }>(
+          `/users/current/accounts/${this.metaApiAccountId}`
+        );
+        if (acc.connectionStatus === "CONNECTED") return true;
+        if (acc.state === "ERROR" || acc.state === "UNDEPLOYED") return false;
+      } catch { /* retry */ }
+      await new Promise(r => setTimeout(r, DEPLOY_POLL_MS));
+    }
+    return false;
+  }
+}
+
+/* ── Quick verification (no deploy, no wait) ─────────────────────────────── */
+/**
+ * Validate that the MetaApi token is working and the account exists/can be found.
+ * Returns a status string + the MetaApi account ID if found.
+ * This is fast — it only calls the provisioning list endpoint.
+ */
+export interface MetaApiVerifyResult {
+  /** Token was accepted by MetaApi API (true even if account not yet provisioned). */
+  tokenValid:       boolean;
+  /** Account was found on MetaApi (provisioned). Only true when both token and account exist. */
+  accountFound:     boolean;
+  metaApiAccountId?: string;
+  state?:            string;
+  connectionStatus?: string;
+  message:           string;
+}
+
+export async function verifyMetaApiAccount(
+  token: string,
+  mt5Login: string,
+  server: string,
+): Promise<MetaApiVerifyResult> {
+  try {
+    const headers = { "auth-token": token, "Content-Type": "application/json" };
+    const res = await fetch(`${PROVISIONING_URL}/users/current/accounts?limit=100`, { headers });
+    if (!res.ok) {
+      return { tokenValid: false, accountFound: false, message: `MetaApi token invalid or quota exceeded (HTTP ${res.status})` };
+    }
+    const accounts: Array<{ id: string; login?: string; server?: string; state?: string; connectionStatus?: string }> = await res.json();
+    const found = accounts.find(
+      a => String(a.login) === String(mt5Login) && a.server === server
+    );
+    if (found) {
+      return {
+        tokenValid:       true,
+        accountFound:     true,
+        metaApiAccountId: found.id,
+        state:            found.state,
+        connectionStatus: found.connectionStatus,
+        message: `Account found on MetaApi — state: ${found.state ?? "unknown"}, connection: ${found.connectionStatus ?? "unknown"}`,
+      };
+    }
+    // Token works but account not yet provisioned — distinct from "verified"
+    return {
+      tokenValid:   true,
+      accountFound: false,
+      message: "MetaApi token valid. Account not yet provisioned — it will be created on first Start.",
+    };
+  } catch (err) {
+    return { tokenValid: false, accountFound: false, message: `MetaApi unreachable: ${String(err)}` };
+  }
+}

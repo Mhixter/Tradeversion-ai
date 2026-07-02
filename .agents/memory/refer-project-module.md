@@ -1,50 +1,40 @@
 ---
 name: Refer Project Module
-description: XM MT5 trading automation admin module — architecture, auth pattern, and critical constraints.
+description: Trading automation panel at /company-admin/refer-project — DB schema, MetaApi integration, worker architecture, auth.
 ---
 
-## What it is
-Isolated admin-only trading automation module accessible at `/company-admin/refer-project`.
-Completely separate from the existing trading engine — zero impact when disabled.
+## Module location
+`artifacts/api-server/src/refer-project/` + `artifacts/tradevision/src/pages/ReferProject/`
 
-## Key architecture decisions
+## DB tables (rp_*)
+5 tables: `rp_settings`, `rp_accounts`, `rp_positions`, `rp_logs`, `rp_ai_config`.
+`rp_accounts` has `metaApiAccountId` (varchar) and `verificationStatus` (varchar: unverified|verifying|verified|failed).
 
-**Auth pattern (both layers):**
-- Frontend: `ReferProject/index.tsx` checks `sessionStorage["company_admin_session"]`; if missing, redirects to `/company-admin`.
-- Backend: all `/api/refer-project/*` routes gated by `requireRPAdmin` middleware (`Authorization: Bearer base64(email:pass)`).
-- Token stored to sessionStorage `rp_admin_token` by `storeRPToken()` called in CompanyAdminPortal after successful login.
-- All 8 sub-pages use `rpGet/rpPost/rpPatch/rpDelete` from `ReferProject/rpApi.ts` — never raw fetch.
+## Auth
+Server-side Bearer token on all routes (`requireRPAdmin`). Token = `base64(email:pass)` hardcoded in `routes.ts`. All account responses go through `sanitizeAccount()` — strips `tradingPassword`/`investorPassword` including the `PUT /accounts/:id` response.
 
-**DB tables (all use `rp_` prefix, pushed with drizzle-kit push):**
-- `rp_settings` — singleton (id=1), module on/off + all trading rules
-- `rp_accounts` — XM MT5 accounts (credentials stored in DB; never returned via API — sanitizeAccount strips them)
-- `rp_positions` — open/closed trades with timer and AI confidence
-- `rp_logs` — all events (rpLog() is fire-and-forget, never throws)
-- `rp_ai_config` — singleton (id=1), indicator weights + signal thresholds
+## Connector architecture
+`MT5Connector` interface in `mt5Connector.ts`. Two impls:
+- `SimulatedMT5Connector` — random-walk prices, shared `simulator` singleton
+- `MetaApiRestConnector` (`metaApiConnector.ts`) — MetaApi REST API via native fetch; real balance/equity/positions; simulated candles/ticks/trade execution
 
-**Worker lifecycle:**
-- `workerManager.start()` called on API server boot (fire-and-forget in app.ts); restores workers for all active accounts.
-- One `AccountWorker` per account — 30s tick interval, reconnects automatically.
-- Position limit enforcement: `openedThisTick` counter tracks per-tick opens; `openBySymbol` map updated after each open for correct per-symbol cap.
+`AccountWorker.initConnector()` (inside startup try/catch): uses MetaApiRestConnector when `METAAPI_TOKEN` env var is set AND account has `tradingPassword` in DB; falls back to SimulatedMT5Connector otherwise. If MetaApi connect fails (network/creds), worker falls back to simulation rather than erroring.
 
-**Why:** Keep the module fully isolated so it can be enabled/disabled without touching the existing app.
+## Zero-balance suppression
+In `accountWorker.tick()`: when `usingMetaApi && currentBalance === 0`, trade opening is skipped silently (no log spam). Sim mode is never suppressed.
 
-## Route structure
-`/api/refer-project/settings` GET/PATCH  
-`/api/refer-project/ai-config` GET/PATCH  
-`/api/refer-project/accounts` GET/POST + /:id DELETE/PUT/start/stop/test-connection  
-`/api/refer-project/dashboard` GET  
-`/api/refer-project/positions` GET  
-`/api/refer-project/stats` GET  
-`/api/refer-project/logs` GET  
+## MetaApi 204 handling
+`provFetch`/`clientFetch` check `res.status === 204` before calling `res.json()` — returns `undefined` safely. Never use string-matching on error messages to detect 204.
 
-## Frontend pages (all at ReferProject/)
-index.tsx (router/sidebar), Dashboard.tsx, ConnectedAccounts.tsx, TradingRules.tsx, AIDecisionEngine.tsx, TradeMonitor.tsx, Statistics.tsx, Logs.tsx, Settings.tsx
+## Verification status semantics
+`verifyMetaApiAccount()` returns `{ tokenValid, accountFound }`.
+- `accountFound` → "verified" (account is provisioned on MetaApi)
+- `tokenValid && !accountFound` → stays "unverified" (token works, not yet provisioned)
+- `!tokenValid` → "failed"
+Do NOT map `tokenValid` alone to "verified" — that's a false positive.
 
-## Navigation entry point
-CompanyAdminPortal.tsx Quick Actions section — "Refer Project" button navigates via `window.location.href`.
-App.tsx AppRouter checks `/company-admin/refer-project` BEFORE the generic `/company-admin` guard.
+## Replit dev network
+MetaApi provisioning domain (`mt-provisioning-api-v1.agiliumtrade.ai`) is DNS-blocked in the Replit dev sandbox. The fallback path to simulation handles this. Live MetaApi data works only in deployed (production) environment.
 
-## MT5 connectivity
-Currently simulated via `SimulatedMT5Connector` (random-walk price model, shared singleton).
-Real MT5 requires MetaApi.cloud or Python bridge — swap `SimulatedMT5Connector` for a real implementation of the `MT5Connector` interface in accountWorker.ts constructor.
+## Worker boot
+`workerManager.start()` called fire-and-forget in `app.ts`. Restores all accounts with `status = active` from DB on boot.

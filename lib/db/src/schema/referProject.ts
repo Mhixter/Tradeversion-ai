@@ -32,10 +32,12 @@ export const rpAccountsTable = pgTable("rp_accounts", {
   status:           varchar("status",          { length: 20  }).default("inactive").notNull(),    // active|inactive|error
   connectionStatus: varchar("connection_status",{ length: 20 }).default("disconnected").notNull(), // connected|disconnected|connecting|error
   lastSyncTime:     timestamp("last_sync_time", { withTimezone: true }),
-  balance:          numeric("balance",  { precision: 18, scale: 2 }).default("0"),
-  equity:           numeric("equity",   { precision: 18, scale: 2 }).default("0"),
-  createdAt:        timestamp("created_at",  { withTimezone: true }).defaultNow(),
-  updatedAt:        timestamp("updated_at",  { withTimezone: true }).defaultNow(),
+  balance:             numeric("balance",  { precision: 18, scale: 2 }).default("0"),
+  equity:              numeric("equity",   { precision: 18, scale: 2 }).default("0"),
+  metaApiAccountId:    varchar("meta_api_account_id", { length: 100 }),
+  verificationStatus:  varchar("verification_status",  { length: 20 }).default("unverified").notNull(), // unverified|verifying|verified|failed
+  createdAt:           timestamp("created_at",  { withTimezone: true }).defaultNow(),
+  updatedAt:           timestamp("updated_at",  { withTimezone: true }).defaultNow(),
 });
 
 /* ─── Positions (open + closed) ──────────────────────────────────────────── */
