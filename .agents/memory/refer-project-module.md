@@ -1,40 +1,45 @@
 ---
 name: Refer Project Module
-description: Trading automation panel at /company-admin/refer-project — DB schema, MetaApi integration, worker architecture, auth.
+description: Trading automation module at /company-admin/refer-project; MetaApi REST connector; real MT5 history fetching
 ---
 
-## Module location
-`artifacts/api-server/src/refer-project/` + `artifacts/tradevision/src/pages/ReferProject/`
+# Refer Project Module
 
-## DB tables (rp_*)
-5 tables: `rp_settings`, `rp_accounts`, `rp_positions`, `rp_logs`, `rp_ai_config`.
-`rp_accounts` has `metaApiAccountId` (varchar) and `verificationStatus` (varchar: unverified|verifying|verified|failed).
+Full trading automation module at `/company-admin/refer-project`. 5 DB tables: `rp_accounts`, `rp_positions`, `rp_logs`, `rp_settings`, `rp_ai_config`.
 
 ## Auth
-Server-side Bearer token on all routes (`requireRPAdmin`). Token = `base64(email:pass)` hardcoded in `routes.ts`. All account responses go through `sanitizeAccount()` — strips `tradingPassword`/`investorPassword` including the `PUT /accounts/:id` response.
+Server-side Bearer token on all routes (`requireRPAdmin`). Also accepts OIDC session (req.user). Token = base64(`email:password`).
 
-## Connector architecture
-`MT5Connector` interface in `mt5Connector.ts`. Two impls:
-- `SimulatedMT5Connector` — random-walk prices, shared `simulator` singleton
-- `MetaApiRestConnector` (`metaApiConnector.ts`) — MetaApi REST API via native fetch; real balance/equity/positions; simulated candles/ticks/trade execution
+## Worker lifecycle
+- `workerManager` starts on server boot, recovers all `status=active` accounts
+- `AccountWorker` per account: 30s tick loop
+- Balance/equity is fetched EVERY tick regardless of `settings.enabled`
+- When MetaApi connect() fails → worker stops with `status=error` (no simulation fallback since 2026-07-02)
 
-`AccountWorker.initConnector()` (inside startup try/catch): uses MetaApiRestConnector when `METAAPI_TOKEN` env var is set AND account has `tradingPassword` in DB; falls back to SimulatedMT5Connector otherwise. If MetaApi connect fails (network/creds), worker falls back to simulation rather than erroring.
+## MetaApi Connector (MetaApiRestConnector)
+- Provisioning URL: `https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai`
+- Client URL: `https://mt-client-api-v1.{region}.agiliumtrade.agiliumtrade.ai`
+- connect() flow: provision() → try deploy (best-effort, ignore 409/422) → try clientFetch immediately → poll waitConnected(120s)
+- provision() returns true if account already CONNECTED (skips /deploy)
+- getDealHistory(days) and getRealOpenPositions() THROW on failure (callers handle errors)
 
-## Zero-balance suppression
-In `accountWorker.tick()`: when `usingMetaApi && currentBalance === 0`, trade opening is skipped silently (no log spam). Sim mode is never suppressed.
+## Real MT5 History Route
+`GET /api/refer-project/accounts/:id/mt5-history?days=30`
+- Returns `{ deals, positions, metaApiAccountId }` on success
+- Returns 422 if no metaApiAccountId, 503 if no token, 502 if MetaApi unreachable
+- Uses `Promise.allSettled` so partial success is possible
 
-## MetaApi 204 handling
-`provFetch`/`clientFetch` check `res.status === 204` before calling `res.json()` — returns `undefined` safely. Never use string-matching on error messages to detect 204.
+## Trade Monitor UI (TradeMonitor.tsx)
+Two tabs:
+- **Real MT5 Account** — fetches real deal history + open positions from MetaApi client API
+- **Bot Trades** — shows positions from rp_positions table (opened by our AI bot)
 
-## Verification status semantics
-`verifyMetaApiAccount()` returns `{ tokenValid, accountFound }`.
-- `accountFound` → "verified" (account is provisioned on MetaApi)
-- `tokenValid && !accountFound` → stays "unverified" (token works, not yet provisioned)
-- `!tokenValid` → "failed"
-Do NOT map `tokenValid` alone to "verified" — that's a false positive.
+**Why:**
+- The simulated connector generated fake balances (10_000 + random * 40_000 = ~$16k)
+- Real balance must come from MetaApi `getAccountInfo()` via client API
+- Real trade history (manually placed MT5 trades) requires MetaApi history-deals endpoint
 
-## Replit dev network
-MetaApi provisioning domain (`mt-provisioning-api-v1.agiliumtrade.ai`) is DNS-blocked in the Replit dev sandbox. The fallback path to simulation handles this. Live MetaApi data works only in deployed (production) environment.
-
-## Worker boot
-`workerManager.start()` called fire-and-forget in `app.ts`. Restores all accounts with `status = active` from DB on boot.
+## Railway deployment
+- Repo: `Mhixter/Tradeversion-ai`, branch `main`, auto-deploy
+- After pushing, user must Stop→Start the worker on Connected Accounts page to pick up new code
+- Railway Logs show raw console.warn output (MetaApiConnector messages) not in rpLogs UI
